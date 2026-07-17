@@ -57,6 +57,13 @@
     }
 
     els.flashcard = $('flashcard') || ensureEl('flashcard', 'div', els.session, 'flashcard');
+    if (els.flashcard) {
+      els.flashcard.setAttribute('role', 'button');
+      els.flashcard.setAttribute('tabindex', '0');
+      if (!els.flashcard.getAttribute('aria-label')) {
+        els.flashcard.setAttribute('aria-label', 'Flashcard — tap to flip');
+      }
+    }
     els.front = $('flashcard-front') || ensureEl('flashcard-front', 'div', els.flashcard, 'flashcard-front');
     els.back = $('flashcard-back') || ensureEl('flashcard-back', 'div', els.flashcard, 'flashcard-back');
 
@@ -478,8 +485,16 @@
       });
     }
     if (els.flashcard) {
-      els.flashcard.addEventListener('click', function () {
+      els.flashcard.addEventListener('click', function (e) {
+        if (e.target.closest('[data-audio-btn]')) return;
         if (!session.flipped) flip();
+      });
+      els.flashcard.addEventListener('keydown', function (e) {
+        if (e.target.closest('[data-audio-btn]')) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!session.flipped) flip();
+        }
       });
     }
     if (els.again) els.again.addEventListener('click', function () { rate('again'); });
