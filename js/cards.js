@@ -101,26 +101,6 @@
     return Object.keys(set).sort();
   }
 
-  function collectStatuses(cards) {
-    var set = {};
-    for (var i = 0; i < cards.length; i++) {
-      // Known words are never studied — omit from the status filter.
-      if (cards[i].status && cards[i].status !== 'known') {
-        set[cards[i].status] = true;
-      }
-    }
-    var order = ['new', 'learning', 'review'];
-    var out = [];
-    for (var k = 0; k < order.length; k++) {
-      if (set[order[k]]) {
-        out.push(order[k]);
-        delete set[order[k]];
-      }
-    }
-    Object.keys(set).sort().forEach(function (s) { out.push(s); });
-    return out;
-  }
-
   var THEME_KEYWORDS = [
     'food', 'emotion', 'work', 'relationship', 'internet', 'travel',
     'body', 'time', 'daily-life', 'idiom',
@@ -140,54 +120,27 @@
   function populateFilters() {
     if (!els.filters) return;
     var cards = getAppCards();
-    var statuses = collectStatuses(cards);
     var keywords = studyKeywordOptions(cards);
 
-    // Prefer existing selects from index.html when present
-    var statusSelect = $('study-status') || $('study-filter-status');
     var kwSelect = $('study-keyword') || $('study-filter-keyword');
 
-    if (!statusSelect || !kwSelect) {
+    if (!kwSelect) {
       els.filters.innerHTML = '';
-
-      var statusLabel = document.createElement('label');
-      statusLabel.className = 'select-field';
-      statusLabel.innerHTML = '<span class="field-label">Status</span>';
-      statusSelect = document.createElement('select');
-      statusSelect.id = 'study-status';
-      statusLabel.appendChild(statusSelect);
-      els.filters.appendChild(statusLabel);
-
       var kwLabel = document.createElement('label');
       kwLabel.className = 'select-field';
-      kwLabel.innerHTML = '<span class="field-label">Keyword</span>';
+      kwLabel.innerHTML = '<span class="field-label">Topic</span>';
       kwSelect = document.createElement('select');
       kwSelect.id = 'study-keyword';
       kwLabel.appendChild(kwSelect);
       els.filters.appendChild(kwLabel);
     }
 
-    var prevStatus = statusSelect.value;
     var prevKw = kwSelect.value;
-    if (prevStatus === 'known' || prevStatus === 'all') prevStatus = '';
-
-    statusSelect.innerHTML = '';
-    var optAll = document.createElement('option');
-    optAll.value = '';
-    optAll.textContent = 'All learning';
-    statusSelect.appendChild(optAll);
-    for (var s = 0; s < statuses.length; s++) {
-      var o = document.createElement('option');
-      o.value = statuses[s];
-      o.textContent = statuses[s];
-      statusSelect.appendChild(o);
-    }
-    if (prevStatus) statusSelect.value = prevStatus;
 
     kwSelect.innerHTML = '';
     var kwAll = document.createElement('option');
     kwAll.value = '';
-    kwAll.textContent = 'All keywords';
+    kwAll.textContent = 'All topics';
     kwSelect.appendChild(kwAll);
     for (var k = 0; k < keywords.length; k++) {
       var ko = document.createElement('option');
@@ -197,7 +150,6 @@
     }
     if (prevKw) kwSelect.value = prevKw;
 
-    els.statusSelect = statusSelect;
     els.keywordSelect = kwSelect;
   }
 
@@ -205,8 +157,6 @@
     if (!card) return false;
     // Known words stay in the library/progress views, not in study sessions.
     if (card.status === 'known') return false;
-    var status = filter.status;
-    if (status && status !== 'all' && card.status !== status) return false;
     if (filter.keyword) {
       var kws = card.keywords;
       if (!kws) return false;
@@ -386,11 +336,8 @@
   }
 
   function readFilterFromDom() {
-    var status = els.statusSelect ? els.statusSelect.value : '';
     var keyword = els.keywordSelect ? els.keywordSelect.value : '';
-    if (status === 'all' || status === 'known') status = '';
     return {
-      status: status || undefined,
       keyword: keyword || undefined,
     };
   }
@@ -402,10 +349,7 @@
     }
 
     filter = filter || readFilterFromDom() || {};
-    var status = filter.status;
-    if (status === 'all' || status === 'known') status = undefined;
     session.filter = {
-      status: status || undefined,
       keyword: filter.keyword || undefined,
     };
 
