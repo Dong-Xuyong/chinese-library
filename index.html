@@ -27,6 +27,10 @@
         <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
         Study
       </button>
+      <button type="button" class="tab" data-tab="progress" aria-controls="view-progress">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19V5M10 19V9M16 19v-6M22 19H2"/><path d="M10 9l3-3 3 2 4-5"/></svg>
+        Progress
+      </button>
     </nav>
 
     <div class="app-shell">
@@ -35,7 +39,7 @@
         <span class="brand-mark" aria-hidden="true">词</span>
         <div class="brand-text">
           <h1 class="brand">More Life Chinese</h1>
-          <p class="tagline">Library · spaced review</p>
+          <p class="tagline">Library · study · progress</p>
         </div>
       </div>
     </header>
@@ -162,6 +166,12 @@
         </div>
       </section>
 
+      <section id="view-progress" class="view view-progress" hidden aria-label="Progress">
+        <div id="progress-root" class="progress-root">
+          <p class="progress-loading">Loading charts…</p>
+        </div>
+      </section>
+
       <div id="loading-banner" class="banner banner-loading" hidden>Loading vocabulary…</div>
       <div id="error-banner" class="banner banner-error" hidden></div>
     </main>
@@ -171,6 +181,7 @@
   <script src="./js/audio.js" defer></script>
   <script src="./js/srs.js" defer></script>
   <script src="./js/cards.js" defer></script>
+  <script src="./js/progress.js" defer></script>
   <script src="./js/app.js" defer></script>
 </body>
 </html>

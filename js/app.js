@@ -52,6 +52,7 @@
     detailBody: document.getElementById("detail-body"),
     viewLibrary: document.getElementById("view-library"),
     viewStudy: document.getElementById("view-study"),
+    viewProgress: document.getElementById("view-progress"),
     tabs: document.querySelectorAll(".tab-bar .tab"),
     loading: document.getElementById("loading-banner"),
     error: document.getElementById("error-banner"),
@@ -226,6 +227,39 @@
     if (keyword) setFiltersOpen(true);
   }
 
+  function setPosFilter(pos) {
+    App.filters.pos = pos || "";
+    if (els.posFilter) els.posFilter.value = App.filters.pos;
+    applyFilters();
+    if (pos) setFiltersOpen(true);
+  }
+
+  function filterByTopic(topic) {
+    App.filters.status = "all";
+    App.filters.pos = "";
+    if (els.posFilter) els.posFilter.value = "";
+    els.statusFilters?.querySelectorAll(".chip-status").forEach((c) => {
+      c.classList.toggle("is-active", c.dataset.status === "all");
+    });
+    setKeywordFilter(topic || "");
+    closeDetail();
+    showTab("library");
+    history.replaceState(null, "", "#library");
+  }
+
+  function filterByPos(pos) {
+    App.filters.status = "all";
+    App.filters.keyword = "";
+    renderKeywordChips();
+    els.statusFilters?.querySelectorAll(".chip-status").forEach((c) => {
+      c.classList.toggle("is-active", c.dataset.status === "all");
+    });
+    setPosFilter(pos || "");
+    closeDetail();
+    showTab("library");
+    history.replaceState(null, "", "#library");
+  }
+
   function openDetail(id) {
     const card = App.cards.find((c) => c.id === id);
     if (!card || !els.detail || !els.detailBody) return;
@@ -311,15 +345,20 @@
   }
 
   function showTab(name) {
-    const isLibrary = name === "library";
-    if (els.viewLibrary) els.viewLibrary.hidden = !isLibrary;
-    if (els.viewStudy) els.viewStudy.hidden = isLibrary;
+    const tab = name === "study" || name === "progress" ? name : "library";
+    if (els.viewLibrary) els.viewLibrary.hidden = tab !== "library";
+    if (els.viewStudy) els.viewStudy.hidden = tab !== "study";
+    if (els.viewProgress) els.viewProgress.hidden = tab !== "progress";
 
-    els.tabs.forEach((tab) => {
-      tab.classList.toggle("is-active", tab.dataset.tab === name);
+    els.tabs.forEach((t) => {
+      t.classList.toggle("is-active", t.dataset.tab === tab);
     });
 
-    const desired = isLibrary ? "#library" : "#study";
+    if (tab === "progress" && window.Progress && typeof window.Progress.render === "function") {
+      window.Progress.render();
+    }
+
+    const desired = "#" + tab;
     if (!location.hash.startsWith("#word/") && location.hash !== desired) {
       history.replaceState(null, "", desired);
     }
@@ -336,6 +375,11 @@
     if (hash === "study") {
       closeDetail();
       showTab("study");
+      return;
+    }
+    if (hash === "progress") {
+      closeDetail();
+      showTab("progress");
       return;
     }
     closeDetail();
@@ -395,7 +439,7 @@
         const name = tab.dataset.tab || "library";
         closeDetail();
         showTab(name);
-        history.replaceState(null, "", name === "study" ? "#study" : "#library");
+        history.replaceState(null, "", "#" + name);
       });
     });
 
@@ -409,6 +453,16 @@
       }
     } catch (err) {
       console.warn("Cards.init failed (study module may load later):", err);
+    }
+    try {
+      if (window.Progress && typeof window.Progress.init === "function") {
+        window.Progress.init();
+      }
+      if (window.Progress && typeof window.Progress.render === "function") {
+        window.Progress.render();
+      }
+    } catch (err) {
+      console.warn("Progress.init failed:", err);
     }
   }
 
@@ -454,6 +508,9 @@
 
   // Public helpers for other modules
   App.setKeywordFilter = setKeywordFilter;
+  App.setPosFilter = setPosFilter;
+  App.filterByTopic = filterByTopic;
+  App.filterByPos = filterByPos;
   App.openDetail = openDetail;
   App.showTab = showTab;
   App.applyFilters = applyFilters;

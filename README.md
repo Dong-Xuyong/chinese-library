@@ -8,6 +8,7 @@ Mobile-first Chinese vocabulary library and in-browser Anki-style study deck, bu
 
 - **Library** — searchable list of learning + known words (hanzi, pinyin, gloss, POS, keywords)
 - **Study** — spaced-repetition flashcards (Again / Hard / Good / Easy) with progress in `localStorage`
+- **Progress** — charts for mastery, SRS due status, topic/POS mix, and audio coverage
 - Data comes from `data/vocab.json`, generated from your vault notes
 
 ## Rebuild vocabulary
@@ -50,7 +51,13 @@ Cards with a recorded file play that audio; cards without one use the browser’
 3. Tap **Start study** for due cards.
 4. Tap the card (or **Reveal**), then rate **Again / Hard / Good / Easy**.
 
-Hash routes: `#library`, `#study`, `#word/<id>`.
+### Progress
+
+1. Open the **Progress** tab for mastery, SRS, topics, POS, and audio charts.
+2. Tap a topic or POS bar to jump into a filtered Library view.
+3. Tap **Study due cards** to go straight to Study.
+
+Hash routes: `#library`, `#study`, `#progress`, `#word/<id>`.
 
 ## Enable GitHub Pages
 
