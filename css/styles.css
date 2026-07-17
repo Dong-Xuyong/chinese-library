@@ -570,6 +570,17 @@ body {
   margin-top: 4px;
 }
 
+.detail-status-actions {
+  margin: 12px 0 4px;
+}
+
+.btn-mark-known {
+  margin-top: 12px;
+  width: auto;
+  min-width: 160px;
+  align-self: center;
+}
+
 .detail-pos {
   font-size: 0.85rem;
   color: var(--paper-muted);

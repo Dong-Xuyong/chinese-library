@@ -260,6 +260,31 @@
     history.replaceState(null, "", "#library");
   }
 
+  function recomputeCounts() {
+    if (window.StatusStore) {
+      App.counts = window.StatusStore.counts(App.cards);
+    } else {
+      App.counts = {
+        total: App.cards.length,
+        learning: App.cards.filter((c) => c.status === "learning").length,
+        known: App.cards.filter((c) => c.status === "known").length,
+      };
+    }
+  }
+
+  function setCardStatus(id, status) {
+    const card = App.cards.find((c) => c.id === id);
+    if (!card || !window.StatusStore) return;
+    window.StatusStore.setCardStatus(card, status);
+    recomputeCounts();
+    applyFilters();
+    if (window.Progress && typeof window.Progress.render === "function") {
+      const progressView = document.getElementById("view-progress");
+      if (progressView && !progressView.hidden) window.Progress.render();
+    }
+    openDetail(id);
+  }
+
   function openDetail(id) {
     const card = App.cards.find((c) => c.id === id);
     if (!card || !els.detail || !els.detailBody) return;
@@ -289,6 +314,11 @@
         </div>`
       : "";
 
+    const isKnown = card.status === "known";
+    const statusAction = isKnown
+      ? `<button type="button" class="btn btn-secondary btn-block" id="detail-status-btn" data-next="learning">Mark as learning</button>`
+      : `<button type="button" class="btn btn-primary btn-block" id="detail-status-btn" data-next="known">Mark as known</button>`;
+
     const audioLabel = card.audio ? "Play audio" : "Play pronunciation";
     els.detailBody.innerHTML = `
       <h2 id="detail-hanzi" class="detail-hanzi">${escapeHtml(card.hanzi)}</h2>
@@ -302,6 +332,7 @@
         </button>
       </div>
       <p class="detail-gloss">${escapeHtml(card.gloss)}</p>
+      <div class="detail-status-actions">${statusAction}</div>
       ${exampleBlock}
       <div class="detail-section">
         <h3>Keywords</h3>
@@ -322,6 +353,13 @@
     audioBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
       if (window.VocabAudio) window.VocabAudio.play(card);
+    });
+
+    const statusBtn = document.getElementById("detail-status-btn");
+    statusBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const next = statusBtn.getAttribute("data-next") || "known";
+      setCardStatus(card.id, next);
     });
 
     els.detail.hidden = false;
@@ -499,17 +537,16 @@
       if (!res.ok) throw new Error(`Failed to load vocab (${res.status})`);
       const data = await res.json();
       App.cards = Array.isArray(data.cards) ? data.cards : [];
+      if (window.StatusStore) {
+        window.StatusStore.applyToCards(App.cards);
+      }
       App.keywords = Array.isArray(data.keywords)
         ? data.keywords
         : [...new Set(App.cards.flatMap((c) => c.keywords || []))].sort();
       App.posList = Array.isArray(data.posList)
         ? data.posList
         : [...new Set(App.cards.map((c) => c.pos).filter(Boolean))].sort();
-      App.counts = data.counts || {
-        total: App.cards.length,
-        learning: App.cards.filter((c) => c.status === "learning").length,
-        known: App.cards.filter((c) => c.status === "known").length,
-      };
+      recomputeCounts();
 
       renderPosOptions();
       renderKeywordChips();
@@ -536,6 +573,8 @@
   App.setPosFilter = setPosFilter;
   App.filterByTopic = filterByTopic;
   App.filterByPos = filterByPos;
+  App.setCardStatus = setCardStatus;
+  App.recomputeCounts = recomputeCounts;
   App.openDetail = openDetail;
   App.showTab = showTab;
   App.applyFilters = applyFilters;

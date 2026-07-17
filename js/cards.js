@@ -294,6 +294,11 @@
         if (card.pos) parts.push('<div class="flashcard-pos">' + escapeHtml(card.pos) + '</div>');
         if (card.gloss) parts.push('<div class="flashcard-gloss">' + escapeHtml(card.gloss) + '</div>');
         parts.push(audioButtonHtml(card));
+        if (card.status !== 'known') {
+          parts.push(
+            '<button type="button" class="btn btn-primary btn-mark-known" data-mark-known>Mark as known</button>'
+          );
+        }
         if (card.example || card.exampleEn) {
           parts.push(
             '<div class="flashcard-example">' +
@@ -305,6 +310,7 @@
         els.back.innerHTML = parts.join('');
         setVisible(els.back, true);
         wireAudioButton(els.back, card);
+        wireMarkKnown(els.back, card);
       } else {
         els.back.innerHTML = '';
         setVisible(els.back, false);
@@ -353,6 +359,23 @@
 
   function playCardAudio(card) {
     if (global.VocabAudio) global.VocabAudio.play(card);
+  }
+
+  function wireMarkKnown(root, card) {
+    if (!root || !card) return;
+    var btn = root.querySelector('[data-mark-known]');
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if (global.App && typeof global.App.setCardStatus === 'function') {
+        global.App.setCardStatus(card.id, 'known');
+      } else if (global.StatusStore) {
+        global.StatusStore.setCardStatus(card, 'known');
+      }
+      btn.textContent = 'Marked known';
+      btn.disabled = true;
+    });
   }
 
   function readFilterFromDom() {

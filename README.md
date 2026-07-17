@@ -43,6 +43,7 @@ Cards with a recorded file play that audio; cards without one use the browser’
 2. Search by hanzi, pinyin, gloss, or keywords.
 3. Filter by **All / Learning / Known**, part of speech, and keyword chips.
 4. Tap a word for the detail sheet (example, notes, keywords). Tap a keyword chip to filter the list.
+5. Tap **Mark as known** (or **Mark as learning**) to move a word between decks — saved on this device.
 
 ### Study
 
