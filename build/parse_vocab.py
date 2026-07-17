@@ -646,6 +646,35 @@ def main() -> int:
         f"audio: embeds={stats['with_embed']} copied={stats['copied']} "
         f"missing={stats['missing']} removed={stats['removed']}"
     )
+
+    # Refresh learning-journey series from vault git history when available.
+    try:
+        import importlib.util
+
+        journey_path = Path(__file__).resolve().parent / "build_journey.py"
+        spec = importlib.util.spec_from_file_location("build_journey", journey_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("Could not load build_journey.py")
+        bj = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bj)
+
+        vault = args.learning.resolve().parents[1]
+        if not (vault / ".git").exists():
+            vault = bj.DEFAULT_VAULT
+        journey = bj.build_journey(vault)
+        out_path = bj.DEFAULT_OUT
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(journey, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        print(
+            f"Wrote {out_path} "
+            f"(series={len(journey['series'])} milestones={len(journey['milestones'])})"
+        )
+    except Exception as exc:  # noqa: BLE001 — journey is optional for vocab rebuild
+        print(f"Journey rebuild skipped: {exc}")
+
     return 0
 
 

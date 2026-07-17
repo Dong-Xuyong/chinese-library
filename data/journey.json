@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-07-17T18:25:37.950077+00:00",
+  "series": [
+    {
+      "date": "2024-05-15",
+      "learning": 1903,
+      "known": 171,
+      "total": 2074
+    },
+    {
+      "date": "2024-06-28",
+      "learning": 1812,
+      "known": 242,
+      "total": 2054
+    },
+    {
+      "date": "2024-08-31",
+      "learning": 1674,
+      "known": 343,
+      "total": 2017
+    },
+    {
+      "date": "2024-09-20",
+      "learning": 1462,
+      "known": 605,
+      "total": 2067
+    },
+    {
+      "date": "2025-03-28",
+      "learning": 1319,
+      "known": 748,
+      "total": 2067
+    },
+    {
+      "date": "2026-03-29",
+      "learning": 1318,
+      "known": 748,
+      "total": 2066
+    },
+    {
+      "date": "2026-05-31",
+      "learning": 1209,
+      "known": 857,
+      "total": 2066
+    },
+    {
+      "date": "2026-07-17",
+      "learning": 1209,
+      "known": 857,
+      "total": 2066
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2024-05-15",
+      "title": "Chinese notes in the vault",
+      "detail": "Vocabulary tracking starts in Obsidian."
+    },
+    {
+      "date": "2024-06-17",
+      "title": "Learning deck active",
+      "detail": "Large learning list established (~1900 entries)."
+    },
+    {
+      "date": "2024-09-15",
+      "title": "Known deck grows",
+      "detail": "Words move into the known note (~600 known)."
+    },
+    {
+      "date": "2024-09-20",
+      "title": "Known reaches 500",
+      "detail": "Known deck crossed 500 words."
+    },
+    {
+      "date": "2025-03-17",
+      "title": "Steady known growth",
+      "detail": "Known crosses ~750 while learning consolidates."
+    },
+    {
+      "date": "2026-05-23",
+      "title": "Known near 850",
+      "detail": "Known deck reaches ~850 words."
+    },
+    {
+      "date": "2026-05-31",
+      "title": "Known reaches 800",
+      "detail": "Known deck crossed 800 words."
+    },
+    {
+      "date": "2026-07-17",
+      "title": "More Life Chinese site",
+      "detail": "Library, Study, and Progress go live on GitHub Pages."
+    }
+  ]
+}

@@ -104,14 +104,17 @@
   function collectStatuses(cards) {
     var set = {};
     for (var i = 0; i < cards.length; i++) {
-      if (cards[i].status) set[cards[i].status] = true;
+      // Known words are never studied — omit from the status filter.
+      if (cards[i].status && cards[i].status !== 'known') {
+        set[cards[i].status] = true;
+      }
     }
-    var known = ['new', 'learning', 'known', 'review'];
+    var order = ['new', 'learning', 'review'];
     var out = [];
-    for (var k = 0; k < known.length; k++) {
-      if (set[known[k]]) {
-        out.push(known[k]);
-        delete set[known[k]];
+    for (var k = 0; k < order.length; k++) {
+      if (set[order[k]]) {
+        out.push(order[k]);
+        delete set[order[k]];
       }
     }
     Object.keys(set).sort().forEach(function (s) { out.push(s); });
@@ -120,7 +123,7 @@
 
   var THEME_KEYWORDS = [
     'food', 'emotion', 'work', 'relationship', 'internet', 'travel',
-    'body', 'time', 'daily-life', 'idiom', 'learning', 'known',
+    'body', 'time', 'daily-life', 'idiom',
   ];
 
   function studyKeywordOptions(cards) {
@@ -166,11 +169,12 @@
 
     var prevStatus = statusSelect.value;
     var prevKw = kwSelect.value;
+    if (prevStatus === 'known' || prevStatus === 'all') prevStatus = '';
 
     statusSelect.innerHTML = '';
     var optAll = document.createElement('option');
     optAll.value = '';
-    optAll.textContent = 'All';
+    optAll.textContent = 'All learning';
     statusSelect.appendChild(optAll);
     for (var s = 0; s < statuses.length; s++) {
       var o = document.createElement('option');
@@ -199,7 +203,10 @@
 
   function cardMatchesFilter(card, filter) {
     if (!card) return false;
-    if (filter.status && card.status !== filter.status) return false;
+    // Known words stay in the library/progress views, not in study sessions.
+    if (card.status === 'known') return false;
+    var status = filter.status;
+    if (status && status !== 'all' && card.status !== status) return false;
     if (filter.keyword) {
       var kws = card.keywords;
       if (!kws) return false;
@@ -381,6 +388,7 @@
   function readFilterFromDom() {
     var status = els.statusSelect ? els.statusSelect.value : '';
     var keyword = els.keywordSelect ? els.keywordSelect.value : '';
+    if (status === 'all' || status === 'known') status = '';
     return {
       status: status || undefined,
       keyword: keyword || undefined,
@@ -394,8 +402,10 @@
     }
 
     filter = filter || readFilterFromDom() || {};
+    var status = filter.status;
+    if (status === 'all' || status === 'known') status = undefined;
     session.filter = {
-      status: filter.status || undefined,
+      status: status || undefined,
       keyword: filter.keyword || undefined,
     };
 
@@ -445,6 +455,9 @@
     if (!card || !global.SRS) return;
 
     global.SRS.review(card.id, rating);
+    if (global.JourneyStore && typeof global.JourneyStore.logStudy === "function") {
+      global.JourneyStore.logStudy(1);
+    }
     session.index += 1;
     session.flipped = false;
 

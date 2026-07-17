@@ -8,8 +8,8 @@ Mobile-first Chinese vocabulary library and in-browser Anki-style study deck, bu
 
 - **Library** — searchable list of learning + known words (hanzi, pinyin, gloss, POS, keywords)
 - **Study** — spaced-repetition flashcards (Again / Hard / Good / Easy) with progress in `localStorage`
-- **Progress** — charts for mastery, SRS due status, topic/POS mix, and audio coverage
-- Data comes from `data/vocab.json`, generated from your vault notes
+- **Progress** — learning journey curve + timeline, mastery, SRS due status, topic/POS mix, and audio coverage
+- Data comes from `data/vocab.json` (and `data/journey.json` for historical curve), generated from your vault notes
 
 ## Rebuild vocabulary
 
@@ -19,7 +19,7 @@ From the repo root (defaults point at the Obsidian vault on this machine):
 python build/parse_vocab.py
 ```
 
-This rebuilds `data/vocab.json` and copies matching Obsidian `.mp3` embeds into `audio/{id}.mp3` (from `Journal/attachments` by default).
+This rebuilds `data/vocab.json`, copies matching Obsidian `.mp3` embeds into `audio/{id}.mp3` (from `Journal/attachments` by default), and refreshes `data/journey.json` from vault git history.
 
 Or with explicit paths:
 
@@ -31,9 +31,15 @@ python build/parse_vocab.py \
   --out data/vocab.json
 ```
 
-Commit and push `data/vocab.json` and `audio/` after rebuilding so GitHub Pages stays in sync.
+Rebuild the journey series alone:
 
-Cards with a recorded file play that audio; cards without one use the browser’s Chinese speech synthesis as a fallback.
+```bash
+python build/build_journey.py
+```
+
+Commit and push `data/vocab.json`, `data/journey.json`, and `audio/` after rebuilding so GitHub Pages stays in sync.
+
+Cards with a recorded file play that audio; cards without one use the browser's Chinese speech synthesis as a fallback.
 
 ## How to use
 
@@ -54,9 +60,11 @@ Cards with a recorded file play that audio; cards without one use the browser’
 
 ### Progress
 
-1. Open the **Progress** tab for mastery, SRS, topics, POS, and audio charts.
-2. Tap a topic or POS bar to jump into a filtered Library view.
-3. Tap **Study due cards** to go straight to Study.
+1. Open the **Progress** tab for the **Learning journey** curve and timeline, plus mastery, SRS, topics, POS, and audio charts.
+2. Vault history powers the past curve; from today, mark-known and study activity stay in this browser (`localStorage`).
+3. Tap a recently mastered chip or timeline word to open it in Library.
+4. Tap a topic or POS bar to jump into a filtered Library view.
+5. Tap **Study due cards** to go straight to Study.
 
 Hash routes: `#library`, `#study`, `#progress`, `#word/<id>`.
 

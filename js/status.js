@@ -75,6 +75,12 @@
     setStatus(card.id, status);
     card.status = status;
     syncKeywords(card);
+    if (
+      global.JourneyStore &&
+      typeof global.JourneyStore.logStatusChange === "function"
+    ) {
+      global.JourneyStore.logStatusChange(card, status);
+    }
     return card;
   }
 
