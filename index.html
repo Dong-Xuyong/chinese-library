@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1419" />
+  <meta name="description" content="More Life Chinese — mobile vocabulary library and Anki-style study" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>More Life Chinese</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/styles.css" />
+</head>
+<body>
+  <div id="app" class="app">
+    <header class="site-header">
+      <h1 class="brand">More Life Chinese</h1>
+      <p class="tagline">Vocabulary library · spaced review</p>
+    </header>
+
+    <main class="main">
+      <!-- Library -->
+      <section id="view-library" class="view view-library" aria-label="Library">
+        <div class="library-toolbar">
+          <label class="search-field">
+            <span class="sr-only">Search</span>
+            <input
+              id="search-input"
+              type="search"
+              placeholder="Search hanzi, pinyin, gloss…"
+              autocomplete="off"
+              enterkeyhint="search"
+            />
+          </label>
+
+          <div id="status-filters" class="status-filters" role="group" aria-label="Status">
+            <button type="button" class="chip chip-status is-active" data-status="all">All</button>
+            <button type="button" class="chip chip-status" data-status="learning">Learning</button>
+            <button type="button" class="chip chip-status" data-status="known">Known</button>
+          </div>
+
+          <label class="select-field">
+            <span class="field-label">Part of speech</span>
+            <select id="pos-filter">
+              <option value="">All POS</option>
+            </select>
+          </label>
+
+          <div id="keyword-chips" class="keyword-chips" aria-label="Keyword filters"></div>
+
+          <p id="stats-line" class="stats-line" aria-live="polite">Loading…</p>
+        </div>
+
+        <div id="card-list" class="card-list" role="list"></div>
+
+        <div id="card-detail" class="card-detail" hidden aria-hidden="true">
+          <div class="detail-backdrop" data-close-detail></div>
+          <article class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="detail-hanzi">
+            <button type="button" class="detail-close" data-close-detail aria-label="Close">×</button>
+            <div id="detail-body" class="detail-body"></div>
+          </article>
+        </div>
+      </section>
+
+      <!-- Study (hooks for js/cards.js + js/srs.js) -->
+      <section id="view-study" class="view view-study" hidden aria-label="Study">
+        <div id="study-filters" class="study-filters">
+          <label class="select-field">
+            <span class="field-label">Status</span>
+            <select id="study-status">
+              <option value="all">All</option>
+              <option value="learning">Learning</option>
+              <option value="known">Known</option>
+            </select>
+          </label>
+          <label class="select-field">
+            <span class="field-label">Keyword</span>
+            <select id="study-keyword">
+              <option value="">All keywords</option>
+            </select>
+          </label>
+        </div>
+
+        <button type="button" id="study-start" class="btn btn-primary btn-block">Start study</button>
+
+        <p id="study-empty" class="study-empty" hidden>No cards due. Check back later or widen filters.</p>
+
+        <div id="study-session" class="study-session" hidden>
+          <p id="study-progress" class="study-progress"></p>
+
+          <button type="button" id="flashcard" class="flashcard" aria-label="Flashcard — tap to flip">
+            <div id="flashcard-front" class="flashcard-face flashcard-front"></div>
+            <div id="flashcard-back" class="flashcard-face flashcard-back" hidden></div>
+          </button>
+
+          <button type="button" id="btn-reveal" class="btn btn-secondary btn-block">Reveal</button>
+
+          <div id="study-actions" class="study-actions" hidden>
+            <button type="button" id="btn-again" class="btn btn-rate btn-again">Again</button>
+            <button type="button" id="btn-hard" class="btn btn-rate btn-hard">Hard</button>
+            <button type="button" id="btn-good" class="btn btn-rate btn-good">Good</button>
+            <button type="button" id="btn-easy" class="btn btn-rate btn-easy">Easy</button>
+          </div>
+        </div>
+      </section>
+
+      <div id="loading-banner" class="banner banner-loading" hidden>Loading vocabulary…</div>
+      <div id="error-banner" class="banner banner-error" hidden></div>
+    </main>
+
+    <nav class="tab-bar" aria-label="Primary">
+      <button type="button" class="tab is-active" data-tab="library" aria-controls="view-library">
+        Library
+      </button>
+      <button type="button" class="tab" data-tab="study" aria-controls="view-study">
+        Study
+      </button>
+    </nav>
+  </div>
+
+  <script src="./js/srs.js" defer></script>
+  <script src="./js/cards.js" defer></script>
+  <script src="./js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="More Life Chinese">
+  <rect width="512" height="512" rx="96" fill="#0f1419"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#2a9d8f" stroke-width="18"/>
+  <text x="256" y="292" text-anchor="middle" font-family="Noto Serif SC, Songti SC, serif" font-size="200" font-weight="700" fill="#e8e2d6">-</text>
+  <rect x="72" y="400" width="120" height="14" rx="7" fill="#c45c26"/>
+</svg>
