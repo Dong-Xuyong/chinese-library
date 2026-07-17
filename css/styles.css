@@ -26,7 +26,7 @@
   --font-zh: "Noto Serif SC", "Songti SC", "SimSun", serif;
   --shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --chrome-top: calc(72px + env(safe-area-inset-top, 0px));
+  --chrome-top: env(safe-area-inset-top, 0px);
   --chrome-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
   color-scheme: dark;
 }
@@ -88,65 +88,11 @@ body {
   padding-bottom: var(--chrome-bottom);
 }
 
-/* Header */
-.site-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  padding: 14px var(--page-pad) 12px;
-  padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  background: linear-gradient(180deg, rgba(12, 16, 20, 0.96) 40%, rgba(12, 16, 20, 0.78));
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(90deg, transparent, var(--ink-line), transparent) 1;
-}
-
-.brand-lockup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: rise-in 0.45s var(--ease-out) both;
-}
-
-.brand-mark {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  font-family: var(--font-zh);
-  font-size: 1.45rem;
-  font-weight: 700;
-  color: #fff4eb;
-  background:
-    linear-gradient(145deg, #e07a3f 0%, var(--vermillion) 55%, #9e3d18 100%);
-  box-shadow: 0 6px 18px rgba(212, 100, 44, 0.35);
-}
-
-.brand-text {
-  min-width: 0;
-}
-
-.brand {
-  margin: 0;
-  font-size: clamp(1.1rem, 2.4vw, 1.45rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-}
-
-.tagline {
-  margin: 3px 0 0;
-  font-size: 0.78rem;
-  color: var(--paper-muted);
-  letter-spacing: 0.02em;
-}
-
 /* Main */
 .main {
   flex: 1;
   padding: 14px var(--page-pad) 20px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1391,12 +1337,6 @@ body {
     font-size: 0.75rem;
   }
 
-  .brand-mark {
-    width: 40px;
-    height: 40px;
-    font-size: 1.25rem;
-  }
-
   .tab {
     font-size: 0.62rem;
   }
@@ -1500,11 +1440,6 @@ body {
     min-width: 0;
     padding-bottom: 0;
     max-width: min(1400px, 100%);
-  }
-
-  .site-header {
-    padding-left: var(--page-pad);
-    padding-right: var(--page-pad);
   }
 
   .view-library {
