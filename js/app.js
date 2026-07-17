@@ -346,16 +346,41 @@
 
   function showTab(name) {
     const tab = name === "study" || name === "progress" ? name : "library";
-    if (els.viewLibrary) els.viewLibrary.hidden = tab !== "library";
-    if (els.viewStudy) els.viewStudy.hidden = tab !== "study";
-    if (els.viewProgress) els.viewProgress.hidden = tab !== "progress";
+    // Re-query in case els were stale
+    const viewLibrary = els.viewLibrary || document.getElementById("view-library");
+    const viewStudy = els.viewStudy || document.getElementById("view-study");
+    const viewProgress = els.viewProgress || document.getElementById("view-progress");
+    els.viewLibrary = viewLibrary;
+    els.viewStudy = viewStudy;
+    els.viewProgress = viewProgress;
 
-    els.tabs.forEach((t) => {
+    if (viewLibrary) {
+      viewLibrary.hidden = tab !== "library";
+      viewLibrary.style.display = tab === "library" ? "" : "none";
+    }
+    if (viewStudy) {
+      viewStudy.hidden = tab !== "study";
+      viewStudy.style.display = tab === "study" ? "" : "none";
+    }
+    if (viewProgress) {
+      viewProgress.hidden = tab !== "progress";
+      viewProgress.style.display = tab === "progress" ? "" : "none";
+      if (tab === "progress") {
+        viewProgress.removeAttribute("hidden");
+        viewProgress.style.display = "block";
+      }
+    }
+
+    document.querySelectorAll(".tab-bar .tab").forEach((t) => {
       t.classList.toggle("is-active", t.dataset.tab === tab);
     });
 
-    if (tab === "progress" && window.Progress && typeof window.Progress.render === "function") {
-      window.Progress.render();
+    if (tab === "progress") {
+      requestAnimationFrame(() => {
+        if (window.Progress && typeof window.Progress.render === "function") {
+          window.Progress.render();
+        }
+      });
     }
 
     const desired = "#" + tab;

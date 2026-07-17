@@ -102,6 +102,20 @@ body {
   display: none !important;
 }
 
+.view-library:not([hidden]) {
+  display: flex;
+}
+
+.view-study:not([hidden]) {
+  display: flex;
+}
+
+.view-progress:not([hidden]) {
+  display: block !important;
+  visibility: visible;
+  opacity: 1;
+}
+
 .view-library {
   display: flex;
   flex-direction: column;
@@ -1023,12 +1037,13 @@ body {
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  animation: rise-in 0.35s var(--ease-out) both;
   padding-bottom: 8px;
+  width: 100%;
 }
 
 .progress-root {
   width: 100%;
+  min-height: 200px;
 }
 
 .progress-loading,

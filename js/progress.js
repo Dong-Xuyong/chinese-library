@@ -25,7 +25,7 @@
   }
 
   function escapeHtml(str) {
-    return String(str ?? "")
+    return String(str == null ? "" : str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -324,27 +324,59 @@
 
   function render() {
     var root = $("progress-root");
-    if (!root) return;
-    var cards = getCards();
-    if (!cards.length) {
+    if (!root) return false;
+    try {
+      var cards = getCards();
+      if (!cards.length) {
+        root.innerHTML =
+          '<p class="progress-empty">Load vocabulary to see progress charts.</p>';
+        return false;
+      }
+      var data = aggregate(cards);
+      root.innerHTML = renderHtml(data);
+      wireInteractions(root);
+      return true;
+    } catch (err) {
+      console.error("Progress.render failed:", err);
       root.innerHTML =
-        '<p class="progress-empty">Load vocabulary to see progress charts.</p>';
-      return;
+        '<p class="progress-empty">Could not render charts. ' +
+        escapeHtml(err && err.message ? err.message : "Unknown error") +
+        "</p>";
+      return false;
     }
-    var data = aggregate(cards);
-    root.innerHTML = renderHtml(data);
-    wireInteractions(root);
   }
 
   function init() {
     if (bound) return;
     bound = true;
-    // Initial render when data already present
-    if (getCards().length) render();
+
+    window.addEventListener("hashchange", function () {
+      if ((location.hash || "").replace(/^#/, "") === "progress") render();
+    });
+
+    // Retry until vocab is loaded (covers race with app.js fetch)
+    var tries = 0;
+    var timer = setInterval(function () {
+      tries += 1;
+      if (render() || tries >= 60) clearInterval(timer);
+    }, 100);
+
+    document.querySelectorAll('.tab-bar .tab[data-tab="progress"]').forEach(function (tab) {
+      tab.addEventListener("click", function () {
+        setTimeout(render, 0);
+      });
+    });
   }
 
   global.Progress = {
     init: init,
     render: render,
   };
+
+  // Defer scripts run after DOM parse — boot immediately
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })(typeof window !== "undefined" ? window : globalThis);
