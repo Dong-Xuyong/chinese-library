@@ -18,6 +18,18 @@
 </head>
 <body>
   <div id="app" class="app">
+    <nav class="tab-bar" aria-label="Primary">
+      <button type="button" class="tab is-active" data-tab="library" aria-controls="view-library">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/><path d="M8 8h1M8 12h1M17 8h1M17 12h1"/></svg>
+        Library
+      </button>
+      <button type="button" class="tab" data-tab="study" aria-controls="view-study">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
+        Study
+      </button>
+    </nav>
+
+    <div class="app-shell">
     <header class="site-header">
       <div class="brand-lockup">
         <span class="brand-mark" aria-hidden="true">词</span>
@@ -153,17 +165,7 @@
       <div id="loading-banner" class="banner banner-loading" hidden>Loading vocabulary…</div>
       <div id="error-banner" class="banner banner-error" hidden></div>
     </main>
-
-    <nav class="tab-bar" aria-label="Primary">
-      <button type="button" class="tab is-active" data-tab="library" aria-controls="view-library">
-        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/><path d="M8 8h1M8 12h1M17 8h1M17 12h1"/></svg>
-        Library
-      </button>
-      <button type="button" class="tab" data-tab="study" aria-controls="view-study">
-        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
-        Study
-      </button>
-    </nav>
+    </div>
   </div>
 
   <script src="./js/srs.js" defer></script>

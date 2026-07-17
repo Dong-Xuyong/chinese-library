@@ -197,11 +197,22 @@
     }
   }
 
+  function isWideLayout() {
+    return window.matchMedia("(min-width: 900px)").matches;
+  }
+
   function setFiltersOpen(open) {
     if (!els.filtersPanel || !els.filtersToggle) return;
-    els.filtersPanel.hidden = !open;
-    els.filtersToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    els.filtersToggle.classList.toggle("is-open", open);
+    const forceOpen = isWideLayout();
+    const next = forceOpen ? true : open;
+    els.filtersPanel.hidden = !next;
+    els.filtersToggle.setAttribute("aria-expanded", next ? "true" : "false");
+    els.filtersToggle.classList.toggle("is-open", next);
+  }
+
+  function syncLayoutMode() {
+    document.documentElement.classList.toggle("layout-wide", isWideLayout());
+    if (isWideLayout()) setFiltersOpen(true);
   }
 
   function setKeywordFilter(keyword) {
@@ -266,7 +277,8 @@
 
     els.detail.hidden = false;
     els.detail.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    // Bottom sheet locks scroll; side panel on wide layouts does not
+    document.body.style.overflow = isWideLayout() ? "" : "hidden";
 
     if (location.hash !== `#word/${id}`) {
       history.replaceState(null, "", `#word/${id}`);
@@ -341,6 +353,7 @@
     });
 
     els.filtersToggle?.addEventListener("click", () => {
+      if (isWideLayout()) return;
       const open = els.filtersToggle.getAttribute("aria-expanded") !== "true";
       setFiltersOpen(open);
     });
@@ -348,6 +361,13 @@
     els.detail?.addEventListener("click", (e) => {
       if (e.target.closest("[data-close-detail]")) closeDetail();
     });
+
+    let resizeTimer = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(syncLayoutMode, 100);
+    });
+    window.addEventListener("orientationchange", () => setTimeout(syncLayoutMode, 150));
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && els.detail && !els.detail.hidden) {
@@ -424,6 +444,7 @@
   App.applyFilters = applyFilters;
 
   wireEvents();
+  syncLayoutMode();
   showTab("library");
   loadVocab();
 })();
