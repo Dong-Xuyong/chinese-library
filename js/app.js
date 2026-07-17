@@ -143,7 +143,11 @@
       btn.setAttribute("role", "listitem");
       btn.dataset.id = card.id;
       btn.innerHTML = `
-        <span class="list-hanzi">${escapeHtml(card.hanzi)}</span>
+        <span class="list-hanzi">${escapeHtml(card.hanzi)}${
+          card.audio
+            ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
+            : ""
+        }</span>
         <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
         <span class="list-pinyin">${escapeHtml(card.pinyin)}</span>
         <span class="list-gloss">${escapeHtml(card.gloss)}</span>
@@ -251,12 +255,17 @@
         </div>`
       : "";
 
+    const audioLabel = card.audio ? "Play audio" : "Play pronunciation";
     els.detailBody.innerHTML = `
       <h2 id="detail-hanzi" class="detail-hanzi">${escapeHtml(card.hanzi)}</h2>
       <p class="detail-pinyin">${escapeHtml(card.pinyin)}</p>
       <div class="detail-meta">
         <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
         <span class="detail-pos">${escapeHtml(card.pos || "")}</span>
+        <button type="button" class="btn-audio" id="detail-audio" aria-label="${audioLabel}" title="${audioLabel}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18 6a8 8 0 010 12"/></svg>
+          <span>Listen</span>
+        </button>
       </div>
       <p class="detail-gloss">${escapeHtml(card.gloss)}</p>
       ${exampleBlock}
@@ -273,6 +282,12 @@
         setKeywordFilter(btn.getAttribute("data-kw") || "");
         showTab("library");
       });
+    });
+
+    const audioBtn = document.getElementById("detail-audio");
+    audioBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.VocabAudio) window.VocabAudio.play(card);
     });
 
     els.detail.hidden = false;

@@ -417,6 +417,18 @@ body {
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-audio-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 0 3px var(--teal-soft);
+  flex-shrink: 0;
 }
 
 .list-pinyin {
@@ -564,6 +576,38 @@ body {
   gap: 8px;
   align-items: center;
   margin-bottom: 14px;
+}
+
+.btn-audio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 181, 165, 0.45);
+  background: var(--teal-soft);
+  color: #9fe0d6;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.btn-audio:hover,
+.btn-audio:focus-visible {
+  border-color: var(--teal);
+  background: rgba(47, 181, 165, 0.28);
+  outline: none;
+}
+
+.btn-audio:active {
+  transform: scale(0.97);
+}
+
+.btn-audio-card {
+  margin-top: 4px;
 }
 
 .detail-pos {

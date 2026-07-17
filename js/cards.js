@@ -272,10 +272,12 @@
     if (els.front) {
       els.front.innerHTML =
         '<div class="flashcard-hanzi">' + escapeHtml(card.hanzi || '') + '</div>' +
+        audioButtonHtml(card) +
         (session.flipped
           ? ''
           : '<div class="flashcard-hint">tap to reveal</div>');
       setVisible(els.front, true);
+      wireAudioButton(els.front, card);
     }
 
     if (els.back) {
@@ -284,6 +286,7 @@
         if (card.pinyin) parts.push('<div class="flashcard-pinyin">' + escapeHtml(card.pinyin) + '</div>');
         if (card.pos) parts.push('<div class="flashcard-pos">' + escapeHtml(card.pos) + '</div>');
         if (card.gloss) parts.push('<div class="flashcard-gloss">' + escapeHtml(card.gloss) + '</div>');
+        parts.push(audioButtonHtml(card));
         if (card.example || card.exampleEn) {
           parts.push(
             '<div class="flashcard-example">' +
@@ -294,6 +297,7 @@
         }
         els.back.innerHTML = parts.join('');
         setVisible(els.back, true);
+        wireAudioButton(els.back, card);
       } else {
         els.back.innerHTML = '';
         setVisible(els.back, false);
@@ -314,6 +318,34 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function audioButtonHtml(card) {
+    var label = card && card.audio ? 'Play audio' : 'Play pronunciation';
+    return (
+      '<button type="button" class="btn-audio btn-audio-card" data-audio-btn aria-label="' +
+      label +
+      '" title="' +
+      label +
+      '">' +
+      '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M11 5L6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7"/><path d="M18 6a8 8 0 010 12"/></svg>' +
+      '<span>Listen</span></button>'
+    );
+  }
+
+  function wireAudioButton(root, card) {
+    if (!root) return;
+    var btn = root.querySelector('[data-audio-btn]');
+    if (!btn) return;
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      playCardAudio(card);
+    });
+  }
+
+  function playCardAudio(card) {
+    if (global.VocabAudio) global.VocabAudio.play(card);
   }
 
   function readFilterFromDom() {
@@ -366,6 +398,7 @@
     setVisible(els.empty, false);
     setVisible(els.session, true);
     renderCard();
+    playCardAudio(currentCard());
   }
 
   function flip() {
@@ -373,6 +406,7 @@
     if (session.flipped) return;
     session.flipped = true;
     renderCard();
+    playCardAudio(currentCard());
   }
 
   function rate(rating) {

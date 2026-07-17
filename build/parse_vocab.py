@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
@@ -20,6 +21,10 @@ DEFAULT_KNOWN = Path(
     r"C:/Users/Dong/Desktop/Obsidian/More Life/_042 Chinese Known Words.md"
 )
 DEFAULT_OUT = REPO_ROOT / "data" / "vocab.json"
+DEFAULT_AUDIO_DIRS = [
+    Path(r"C:/Users/Dong/Desktop/Obsidian/Journal/attachments"),
+]
+DEFAULT_AUDIO_OUT = REPO_ROOT / "audio"
 
 HANZI_RE = re.compile(r"[\u4e00-\u9fff]")
 ENTRY_RE = re.compile(
@@ -48,6 +53,9 @@ USAGE_PARTS_RE = re.compile(
 )
 TRAILING_MARKERS_RE = re.compile(
     r"\s*(?:@|\$|#quote|!\[\[[^\]]*\]\])\s*$", re.IGNORECASE
+)
+AUDIO_EMBED_RE = re.compile(
+    r"!\[\[([^\]|]+\.mp3)(?:\|[^\]]*)?\]\]", re.IGNORECASE
 )
 HAS_AT_RE = re.compile(r"(?:^|[\s>])@\s*(?:<!--|$)|(?:</details>\s*)@\s*$|@\s*$")
 POS_SPLIT_RE = re.compile(r"\s+-\s+")
@@ -186,6 +194,7 @@ def sanitize_details_html(inner: str) -> str:
 
 def richness(card: dict[str, Any]) -> tuple:
     return (
+        1 if card.get("_audioSrc") else 0,
         1 if card.get("detailsHtml") else 0,
         1 if card.get("example") else 0,
         len(card.get("gloss") or ""),
@@ -194,6 +203,11 @@ def richness(card: dict[str, Any]) -> tuple:
         # prefer known over learning when richness ties later
         1 if card.get("status") == "known" else 0,
     )
+
+
+def extract_audio_name(line: str) -> str:
+    m = AUDIO_EMBED_RE.search(line)
+    return (m.group(1) or "").strip() if m else ""
 
 
 def extract_usage(details_inner: str) -> tuple[str, str, str]:
@@ -384,6 +398,7 @@ def parse_entry_line(line: str, status: str) -> dict[str, Any] | None:
         final_status = "known"
 
     example, example_pinyin, example_en = extract_usage(details_inner)
+    audio_src = extract_audio_name(line)
 
     card = {
         "id": "",  # filled later
@@ -396,7 +411,9 @@ def parse_entry_line(line: str, status: str) -> dict[str, Any] | None:
         "examplePinyin": example_pinyin,
         "exampleEn": example_en,
         "detailsHtml": details_html,
+        "audio": "",
         "keywords": build_keywords(pos, final_status, gloss, details_inner),
+        "_audioSrc": audio_src,
     }
     return card
 
@@ -443,6 +460,11 @@ def merge_cards(
                 winner.get("gloss", ""),
                 winner.get("detailsHtml", ""),
             )
+        # Keep audio from either entry
+        if not winner.get("_audioSrc"):
+            winner["_audioSrc"] = card.get("_audioSrc") or existing.get(
+                "_audioSrc", ""
+            )
         by_hanzi[key] = winner
 
     # Process learning first, then known (known preferred on ties via richness/status)
@@ -465,16 +487,88 @@ def assign_ids(cards: list[dict[str, Any]]) -> None:
         card["id"] = base if n == 1 else f"{base}-{n}"
 
 
+def index_audio_files(audio_dirs: list[Path]) -> dict[str, Path]:
+    index: dict[str, Path] = {}
+    for directory in audio_dirs:
+        if not directory.is_dir():
+            continue
+        for path in directory.glob("*.mp3"):
+            index.setdefault(path.name, path)
+    return index
+
+
+def sync_audio(
+    cards: list[dict[str, Any]],
+    audio_dirs: list[Path],
+    audio_out: Path,
+) -> dict[str, int]:
+    """Copy matched Obsidian mp3s into audio/{id}.mp3 and set card['audio']."""
+    index = index_audio_files(audio_dirs)
+    audio_out.mkdir(parents=True, exist_ok=True)
+
+    # Remove stale generated files not referenced this run
+    keep: set[str] = set()
+    copied = 0
+    missing = 0
+    with_src = 0
+
+    for card in cards:
+        src_name = (card.pop("_audioSrc", None) or "").strip()
+        card_id = card["id"]
+        dest_name = f"{card_id}.mp3"
+        dest = audio_out / dest_name
+
+        if not src_name:
+            card["audio"] = ""
+            continue
+
+        with_src += 1
+        src = index.get(src_name)
+        if src is None:
+            card["audio"] = ""
+            missing += 1
+            continue
+
+        shutil.copy2(src, dest)
+        card["audio"] = f"./audio/{dest_name}"
+        keep.add(dest_name)
+        copied += 1
+
+    # Clean orphaned mp3s from previous builds
+    removed = 0
+    for path in audio_out.glob("*.mp3"):
+        if path.name not in keep:
+            path.unlink(missing_ok=True)
+            removed += 1
+
+    return {
+        "with_embed": with_src,
+        "copied": copied,
+        "missing": missing,
+        "removed": removed,
+    }
+
+
 def build_output(
-    learning_path: Path, known_path: Path
+    learning_path: Path,
+    known_path: Path,
+    audio_dirs: list[Path] | None = None,
+    audio_out: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, int]]:
     learning_cards = parse_file(learning_path, "learning")
     known_cards = parse_file(known_path, "known")
     merged = merge_cards(learning_cards, known_cards)
     assign_ids(merged)
 
+    audio_stats = sync_audio(
+        merged,
+        audio_dirs or DEFAULT_AUDIO_DIRS,
+        audio_out or DEFAULT_AUDIO_OUT,
+    )
+
     learning_n = sum(1 for c in merged if c["status"] == "learning")
     known_n = sum(1 for c in merged if c["status"] == "known")
+    audio_n = sum(1 for c in merged if c.get("audio"))
 
     all_keywords: set[str] = set()
     all_pos: set[str] = set()
@@ -489,6 +583,7 @@ def build_output(
             "total": len(merged),
             "learning": learning_n,
             "known": known_n,
+            "withAudio": audio_n,
         },
         "keywords": sorted(all_keywords),
         "posList": sorted(all_pos),
@@ -500,6 +595,8 @@ def build_output(
         "total": len(merged),
         "learning": learning_n,
         "known": known_n,
+        "with_audio": audio_n,
+        **audio_stats,
     }
     return out, stats
 
@@ -509,6 +606,14 @@ def main() -> int:
     parser.add_argument("--learning", type=Path, default=DEFAULT_LEARNING)
     parser.add_argument("--known", type=Path, default=DEFAULT_KNOWN)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    parser.add_argument(
+        "--audio-dir",
+        type=Path,
+        action="append",
+        dest="audio_dirs",
+        help="Directory of Obsidian .mp3 attachments (repeatable)",
+    )
+    parser.add_argument("--audio-out", type=Path, default=DEFAULT_AUDIO_OUT)
     args = parser.parse_args()
 
     if not args.learning.is_file():
@@ -516,7 +621,12 @@ def main() -> int:
     if not args.known.is_file():
         raise SystemExit(f"Known file not found: {args.known}")
 
-    data, stats = build_output(args.learning, args.known)
+    data, stats = build_output(
+        args.learning,
+        args.known,
+        audio_dirs=args.audio_dirs or DEFAULT_AUDIO_DIRS,
+        audio_out=args.audio_out,
+    )
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n",
@@ -526,11 +636,15 @@ def main() -> int:
     print(f"Wrote {args.out}")
     print(
         f"counts: total={stats['total']} learning={stats['learning']} "
-        f"known={stats['known']}"
+        f"known={stats['known']} withAudio={stats['with_audio']}"
     )
     print(
         f"raw parsed: learning={stats['raw_learning']} "
         f"known={stats['raw_known']}"
+    )
+    print(
+        f"audio: embeds={stats['with_embed']} copied={stats['copied']} "
+        f"missing={stats['missing']} removed={stats['removed']}"
     )
     return 0
 

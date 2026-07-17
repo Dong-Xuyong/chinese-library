@@ -18,16 +18,21 @@ From the repo root (defaults point at the Obsidian vault on this machine):
 python build/parse_vocab.py
 ```
 
+This rebuilds `data/vocab.json` and copies matching Obsidian `.mp3` embeds into `audio/{id}.mp3` (from `Journal/attachments` by default).
+
 Or with explicit paths:
 
 ```bash
 python build/parse_vocab.py \
   --learning "C:/Users/Dong/Desktop/Obsidian/More Life/_040 Chinese Vocabulary.md" \
   --known "C:/Users/Dong/Desktop/Obsidian/More Life/_042 Chinese Known Words.md" \
+  --audio-dir "C:/Users/Dong/Desktop/Obsidian/Journal/attachments" \
   --out data/vocab.json
 ```
 
-Commit and push `data/vocab.json` after rebuilding so GitHub Pages stays in sync.
+Commit and push `data/vocab.json` and `audio/` after rebuilding so GitHub Pages stays in sync.
+
+Cards with a recorded file play that audio; cards without one use the browser’s Chinese speech synthesis as a fallback.
 
 ## How to use
 
