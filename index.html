@@ -19,39 +19,56 @@
 <body>
   <div id="app" class="app">
     <header class="site-header">
-      <h1 class="brand">More Life Chinese</h1>
-      <p class="tagline">Vocabulary library · spaced review</p>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">词</span>
+        <div class="brand-text">
+          <h1 class="brand">More Life Chinese</h1>
+          <p class="tagline">Library · spaced review</p>
+        </div>
+      </div>
     </header>
 
     <main class="main">
-      <!-- Library -->
       <section id="view-library" class="view view-library" aria-label="Library">
         <div class="library-toolbar">
           <label class="search-field">
+            <span class="search-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+            </span>
             <span class="sr-only">Search</span>
             <input
               id="search-input"
               type="search"
-              placeholder="Search hanzi, pinyin, gloss…"
+              placeholder="Search hanzi, pinyin, meaning…"
               autocomplete="off"
               enterkeyhint="search"
             />
           </label>
 
-          <div id="status-filters" class="status-filters" role="group" aria-label="Status">
-            <button type="button" class="chip chip-status is-active" data-status="all">All</button>
-            <button type="button" class="chip chip-status" data-status="learning">Learning</button>
-            <button type="button" class="chip chip-status" data-status="known">Known</button>
+          <div class="filter-row">
+            <div id="status-filters" class="status-filters" role="group" aria-label="Status">
+              <button type="button" class="chip chip-status is-active" data-status="all">All</button>
+              <button type="button" class="chip chip-status" data-status="learning">Learning</button>
+              <button type="button" class="chip chip-status" data-status="known">Known</button>
+            </div>
+            <button type="button" id="filters-toggle" class="btn-filters" aria-expanded="false" aria-controls="filters-panel">
+              Filters
+              <span class="filters-caret" aria-hidden="true"></span>
+            </button>
           </div>
 
-          <label class="select-field">
-            <span class="field-label">Part of speech</span>
-            <select id="pos-filter">
-              <option value="">All POS</option>
-            </select>
-          </label>
-
-          <div id="keyword-chips" class="keyword-chips" aria-label="Keyword filters"></div>
+          <div id="filters-panel" class="filters-panel" hidden>
+            <label class="select-field">
+              <span class="field-label">Part of speech</span>
+              <select id="pos-filter">
+                <option value="">All POS</option>
+              </select>
+            </label>
+            <div class="keyword-block">
+              <span class="field-label">Topics</span>
+              <div id="keyword-chips" class="keyword-chips" aria-label="Keyword filters"></div>
+            </div>
+          </div>
 
           <p id="stats-line" class="stats-line" aria-live="polite">Loading…</p>
         </div>
@@ -61,50 +78,74 @@
         <div id="card-detail" class="card-detail" hidden aria-hidden="true">
           <div class="detail-backdrop" data-close-detail></div>
           <article class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="detail-hanzi">
+            <div class="detail-handle" aria-hidden="true"></div>
             <button type="button" class="detail-close" data-close-detail aria-label="Close">×</button>
             <div id="detail-body" class="detail-body"></div>
           </article>
         </div>
       </section>
 
-      <!-- Study (hooks for js/cards.js + js/srs.js) -->
       <section id="view-study" class="view view-study" hidden aria-label="Study">
-        <div id="study-filters" class="study-filters">
-          <label class="select-field">
-            <span class="field-label">Status</span>
-            <select id="study-status">
-              <option value="all">All</option>
-              <option value="learning">Learning</option>
-              <option value="known">Known</option>
-            </select>
-          </label>
-          <label class="select-field">
-            <span class="field-label">Keyword</span>
-            <select id="study-keyword">
-              <option value="">All keywords</option>
-            </select>
-          </label>
+        <div id="study-idle" class="study-idle">
+          <div class="study-hero" aria-hidden="true">
+            <span class="study-hero-glyph">练</span>
+          </div>
+          <h2 class="study-title">Study session</h2>
+          <p class="study-lead">Review due cards with Anki-style ratings. Progress stays on this phone.</p>
+
+          <div id="study-filters" class="study-filters">
+            <label class="select-field">
+              <span class="field-label">Status</span>
+              <select id="study-status">
+                <option value="all">All</option>
+                <option value="learning">Learning</option>
+                <option value="known">Known</option>
+              </select>
+            </label>
+            <label class="select-field">
+              <span class="field-label">Topic</span>
+              <select id="study-keyword">
+                <option value="">All topics</option>
+              </select>
+            </label>
+          </div>
+
+          <button type="button" id="study-start" class="btn btn-primary btn-block">Start study</button>
+          <p id="study-empty" class="study-empty" hidden>No cards due. Check back later or widen filters.</p>
         </div>
 
-        <button type="button" id="study-start" class="btn btn-primary btn-block">Start study</button>
-
-        <p id="study-empty" class="study-empty" hidden>No cards due. Check back later or widen filters.</p>
-
         <div id="study-session" class="study-session" hidden>
-          <p id="study-progress" class="study-progress"></p>
+          <div class="study-progress-wrap">
+            <div class="study-progress-bar" aria-hidden="true">
+              <div id="study-progress-fill" class="study-progress-fill"></div>
+            </div>
+            <p id="study-progress" class="study-progress"></p>
+          </div>
 
           <button type="button" id="flashcard" class="flashcard" aria-label="Flashcard — tap to flip">
             <div id="flashcard-front" class="flashcard-face flashcard-front"></div>
             <div id="flashcard-back" class="flashcard-face flashcard-back" hidden></div>
           </button>
 
-          <button type="button" id="btn-reveal" class="btn btn-secondary btn-block">Reveal</button>
+          <button type="button" id="btn-reveal" class="btn btn-secondary btn-block">Reveal answer</button>
 
           <div id="study-actions" class="study-actions" hidden>
-            <button type="button" id="btn-again" class="btn btn-rate btn-again">Again</button>
-            <button type="button" id="btn-hard" class="btn btn-rate btn-hard">Hard</button>
-            <button type="button" id="btn-good" class="btn btn-rate btn-good">Good</button>
-            <button type="button" id="btn-easy" class="btn btn-rate btn-easy">Easy</button>
+            <button type="button" id="btn-again" class="btn btn-rate btn-again">
+              <span class="rate-key">1</span>
+              Again
+            </button>
+            <button type="button" id="btn-hard" class="btn btn-rate btn-hard">
+              <span class="rate-key">2</span>
+              Hard
+            </button>
+            <button type="button" id="btn-good" class="btn btn-rate btn-good">
+              <span class="rate-key">3</span>
+              Good
+            </button>
+            <button type="button" id="btn-easy" class="btn btn-rate btn-easy">
+              <span class="rate-key">4</span>
+              Easy
+            </button>
           </div>
         </div>
       </section>
@@ -115,9 +156,11 @@
 
     <nav class="tab-bar" aria-label="Primary">
       <button type="button" class="tab is-active" data-tab="library" aria-controls="view-library">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/><path d="M8 8h1M8 12h1M17 8h1M17 12h1"/></svg>
         Library
       </button>
       <button type="button" class="tab" data-tab="study" aria-controls="view-study">
+        <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
         Study
       </button>
     </nav>

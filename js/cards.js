@@ -42,15 +42,17 @@
   function resolveElements() {
     var view = $('view-study') || document.querySelector('[data-view="study"]');
     els.view = view;
+    els.idle = $('study-idle');
 
     els.filters = $('study-filters') || ensureEl('study-filters', 'div', view, 'study-filters');
     els.start = $('study-start') || ensureEl('study-start', 'button', view, 'study-start');
-    if (els.start && !els.start.textContent) els.start.textContent = 'Start study';
+    if (els.start && !els.start.textContent.trim()) els.start.textContent = 'Start study';
 
     els.session = $('study-session') || ensureEl('study-session', 'div', view, 'study-session');
     els.progress = $('study-progress') || ensureEl('study-progress', 'div', els.session, 'study-progress');
-    els.empty = $('study-empty') || ensureEl('study-empty', 'div', els.session, 'study-empty');
-    if (els.empty && !els.empty.textContent) {
+    els.progressFill = $('study-progress-fill');
+    els.empty = $('study-empty') || ensureEl('study-empty', 'div', els.idle || view, 'study-empty');
+    if (els.empty && !els.empty.textContent.trim()) {
       els.empty.textContent = 'No due cards match this filter.';
     }
 
@@ -60,17 +62,12 @@
 
     els.actions = $('study-actions') || ensureEl('study-actions', 'div', els.session, 'study-actions');
     els.reveal = $('btn-reveal') || ensureEl('btn-reveal', 'button', els.session, 'btn-reveal');
-    if (els.reveal && !els.reveal.textContent) els.reveal.textContent = 'Reveal';
+    if (els.reveal && !els.reveal.textContent.trim()) els.reveal.textContent = 'Reveal answer';
 
     els.again = $('btn-again') || ensureEl('btn-again', 'button', els.actions, 'btn-again');
     els.hard = $('btn-hard') || ensureEl('btn-hard', 'button', els.actions, 'btn-hard');
     els.good = $('btn-good') || ensureEl('btn-good', 'button', els.actions, 'btn-good');
     els.easy = $('btn-easy') || ensureEl('btn-easy', 'button', els.actions, 'btn-easy');
-
-    if (els.again && !els.again.textContent) els.again.textContent = 'Again';
-    if (els.hard && !els.hard.textContent) els.hard.textContent = 'Hard';
-    if (els.good && !els.good.textContent) els.good.textContent = 'Good';
-    if (els.easy && !els.easy.textContent) els.easy.textContent = 'Easy';
   }
 
   function getAppCards() {
@@ -238,23 +235,22 @@
   }
 
   function updateProgress() {
-    if (!els.progress) return;
     if (!session.active) {
-      els.progress.textContent = '';
+      if (els.progress) els.progress.textContent = '';
+      if (els.progressFill) els.progressFill.style.width = '0%';
       return;
     }
+    var done = session.index;
+    var total = session.queue.length || 1;
     var pos = Math.min(session.index + 1, session.queue.length);
-    var total = session.queue.length;
-    var remainingDue = 0;
-    if (global.SRS && typeof global.SRS.dueCards === 'function') {
-      var ids = getAppCards()
-        .filter(function (c) { return cardMatchesFilter(c, session.filter); })
-        .map(function (c) { return c.id; });
-      remainingDue = global.SRS.dueCards(ids).length;
-    } else {
-      remainingDue = Math.max(0, total - session.index);
+    var pct = Math.round((done / total) * 100);
+    if (session.index >= session.queue.length) pct = 100;
+    if (els.progressFill) els.progressFill.style.width = pct + '%';
+    if (els.progress) {
+      els.progress.textContent =
+        (session.queue.length ? pos : 0) + ' / ' + session.queue.length +
+        ' · ' + Math.max(0, session.queue.length - session.index) + ' left';
     }
-    els.progress.textContent = pos + ' / ' + total + ' · ' + remainingDue + ' due';
   }
 
   function renderCard() {
@@ -305,7 +301,7 @@
     }
 
     if (els.flashcard) {
-      els.flashcard.classList.toggle('flipped', !!session.flipped);
+      els.flashcard.classList.toggle('is-flipped', !!session.flipped);
     }
 
     showRatingButtons(!!session.flipped);
@@ -358,18 +354,17 @@
     session.flipped = false;
     session.totalDueAtStart = queue.length;
 
-    setVisible(els.session, true);
     if (!queue.length) {
-      setVisible(els.flashcard, false);
-      setVisible(els.reveal, false);
-      showRatingButtons(false);
+      setVisible(els.idle, true);
+      setVisible(els.session, false);
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'No due cards match this filter.';
-      if (els.progress) els.progress.textContent = '0 / 0 · 0 due';
+      if (els.empty) els.empty.textContent = 'No cards due. Check back later or widen filters.';
       return;
     }
 
+    setVisible(els.idle, false);
     setVisible(els.empty, false);
+    setVisible(els.session, true);
     renderCard();
   }
 
@@ -390,16 +385,16 @@
     session.flipped = false;
 
     if (session.index >= session.queue.length) {
-      endSession();
-      setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Session complete.';
-      setVisible(els.flashcard, false);
-      setVisible(els.reveal, false);
-      showRatingButtons(false);
+      if (els.progressFill) els.progressFill.style.width = '100%';
       if (els.progress) {
         els.progress.textContent =
-          session.totalDueAtStart + ' / ' + session.totalDueAtStart + ' · 0 due';
+          session.totalDueAtStart + ' / ' + session.totalDueAtStart + ' · done';
       }
+      endSession();
+      setVisible(els.session, false);
+      setVisible(els.idle, true);
+      setVisible(els.empty, true);
+      if (els.empty) els.empty.textContent = 'Session complete. Start again anytime.';
       return;
     }
 
@@ -413,6 +408,7 @@
     session.flipped = false;
     showRatingButtons(false);
     setVisible(els.reveal, false);
+    if (els.flashcard) els.flashcard.classList.remove('is-flipped');
   }
 
   function onKeydown(e) {
@@ -466,11 +462,8 @@
     wireEvents();
     showRatingButtons(false);
     setVisible(els.empty, false);
-    if (els.session && !session.active) {
-      // Keep session panel available; flashcard hidden until start
-      setVisible(els.flashcard, false);
-      setVisible(els.reveal, false);
-    }
+    setVisible(els.idle, true);
+    setVisible(els.session, false);
   }
 
   global.Cards = {

@@ -26,11 +26,26 @@
 
   window.App = App;
 
+  const THEME_KEYWORDS = [
+    "food",
+    "emotion",
+    "work",
+    "relationship",
+    "internet",
+    "travel",
+    "body",
+    "time",
+    "daily-life",
+    "idiom",
+  ];
+
   const els = {
     search: document.getElementById("search-input"),
     statusFilters: document.getElementById("status-filters"),
     posFilter: document.getElementById("pos-filter"),
     keywordChips: document.getElementById("keyword-chips"),
+    filtersToggle: document.getElementById("filters-toggle"),
+    filtersPanel: document.getElementById("filters-panel"),
     stats: document.getElementById("stats-line"),
     list: document.getElementById("card-list"),
     detail: document.getElementById("card-detail"),
@@ -156,40 +171,20 @@
     if (!els.keywordChips) return;
     els.keywordChips.replaceChildren();
 
+    const available = new Set(App.keywords);
+    const chips = THEME_KEYWORDS.filter((k) => available.has(k));
+    if (App.filters.keyword && !chips.includes(App.filters.keyword)) {
+      chips.unshift(App.filters.keyword);
+    }
+
     const clear = document.createElement("button");
     clear.type = "button";
     clear.className = "chip chip-keyword" + (App.filters.keyword ? "" : " is-active");
-    clear.textContent = "All";
+    clear.textContent = "All topics";
     clear.addEventListener("click", () => setKeywordFilter(""));
     els.keywordChips.appendChild(clear);
 
-    // Prefer theme-ish keywords first; show a useful subset + active
-    const themes = new Set([
-      "food",
-      "emotion",
-      "work",
-      "relationship",
-      "internet",
-      "travel",
-      "body",
-      "time",
-      "daily-life",
-      "idiom",
-      "learning",
-      "known",
-    ]);
-    const prioritized = [
-      ...App.keywords.filter((k) => themes.has(k)),
-      ...App.keywords.filter((k) => !themes.has(k)),
-    ];
-
-    const maxChips = 40;
-    const shown = new Set();
-    if (App.filters.keyword) shown.add(App.filters.keyword);
-
-    for (const kw of prioritized) {
-      if (shown.size >= maxChips && !shown.has(kw)) continue;
-      shown.add(kw);
+    for (const kw of chips) {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className =
@@ -199,16 +194,21 @@
         setKeywordFilter(App.filters.keyword === kw ? "" : kw)
       );
       els.keywordChips.appendChild(chip);
-      if (shown.size >= maxChips && App.filters.keyword && !prioritized.slice(0, maxChips).includes(App.filters.keyword)) {
-        // ensure active is visible — already added above
-      }
     }
+  }
+
+  function setFiltersOpen(open) {
+    if (!els.filtersPanel || !els.filtersToggle) return;
+    els.filtersPanel.hidden = !open;
+    els.filtersToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    els.filtersToggle.classList.toggle("is-open", open);
   }
 
   function setKeywordFilter(keyword) {
     App.filters.keyword = keyword || "";
     renderKeywordChips();
     applyFilters();
+    if (keyword) setFiltersOpen(true);
   }
 
   function openDetail(id) {
@@ -338,6 +338,11 @@
     els.posFilter?.addEventListener("change", () => {
       App.filters.pos = els.posFilter.value;
       applyFilters();
+    });
+
+    els.filtersToggle?.addEventListener("click", () => {
+      const open = els.filtersToggle.getAttribute("aria-expanded") !== "true";
+      setFiltersOpen(open);
     });
 
     els.detail?.addEventListener("click", (e) => {
