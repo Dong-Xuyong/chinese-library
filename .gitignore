@@ -7,3 +7,5 @@ _site/
 __pycache__/
 *.pyc
 .env
+
+data/char_batches/

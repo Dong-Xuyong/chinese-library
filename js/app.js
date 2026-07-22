@@ -8,6 +8,7 @@
   "use strict";
 
   const VOCAB_URL = "./data/vocab.json";
+  const CHARACTERS_URL = "./data/characters.json";
 
   /** @type {{ cards: any[], filtered: any[], filters: object, keywords: string[], posList: string[], counts: object }} */
   const App = {
@@ -22,6 +23,8 @@
     keywords: [],
     posList: [],
     counts: { total: 0, learning: 0, known: 0 },
+    characters: null,
+    charactersPromise: null,
   };
 
   window.App = App;
@@ -285,10 +288,143 @@
     openDetail(id);
   }
 
+
+  function isCjkChar(ch) {
+    if (!ch) return false;
+    const code = ch.codePointAt(0);
+    return (
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0x3400 && code <= 0x4dbf) ||
+      (code >= 0xf900 && code <= 0xfaff)
+    );
+  }
+
+  function ensureCharacters() {
+    if (App.characters) return Promise.resolve(App.characters);
+    if (App.charactersPromise) return App.charactersPromise;
+    App.charactersPromise = fetch(CHARACTERS_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then((data) => {
+        App.characters =
+          data && data.characters && typeof data.characters === "object"
+            ? data.characters
+            : {};
+        return App.characters;
+      })
+      .catch((err) => {
+        console.warn("characters.json failed to load:", err);
+        App.characters = {};
+        return App.characters;
+      });
+    return App.charactersPromise;
+  }
+
+  function hanziGlyphButtons(hanzi, selected) {
+    return Array.from(String(hanzi || ""))
+      .map((ch) => {
+        if (!isCjkChar(ch)) {
+          return `<span class="char-glyph-sep">${escapeHtml(ch)}</span>`;
+        }
+        const active = ch === selected ? " is-active" : "";
+        return (
+          `<button type="button" class="char-glyph${active}" data-char="${escapeHtml(ch)}" ` +
+          `aria-pressed="${ch === selected ? "true" : "false"}" ` +
+          `aria-label="Character ${escapeHtml(ch)}">${escapeHtml(ch)}</button>`
+        );
+      })
+      .join("");
+  }
+
+  function firstCjkChar(hanzi) {
+    for (const ch of Array.from(String(hanzi || ""))) {
+      if (isCjkChar(ch)) return ch;
+    }
+    return "";
+  }
+
+  function originPanelHtml(ch) {
+    const entry = App.characters && App.characters[ch];
+    if (!entry) {
+      return (
+        `<div class="detail-section detail-origin" id="detail-origin">` +
+        `<h3>Character origin</h3>` +
+        `<p class="detail-origin-empty">Origin not available yet for ${escapeHtml(ch || "?")}.</p>` +
+        `</div>`
+      );
+    }
+    const comp = entry.composition || {};
+    const parts = Array.isArray(comp.parts) ? comp.parts : [];
+    const partsHtml = parts.length
+      ? `<ul class="origin-parts">` +
+        parts
+          .map((p) => {
+            return (
+              `<li><span class="origin-part-char">${escapeHtml(p.char || "")}</span>` +
+              `<span class="origin-part-role">${escapeHtml(p.role || "")}</span>` +
+              (p.note
+                ? `<span class="origin-part-note">${escapeHtml(p.note)}</span>`
+                : "") +
+              `</li>`
+            );
+          })
+          .join("") +
+        `</ul>`
+      : "";
+    const formula = comp.formula
+      ? `<p class="origin-formula">${escapeHtml(comp.formula)}</p>`
+      : "";
+    const type = comp.type
+      ? `<span class="origin-type">${escapeHtml(comp.type)}</span>`
+      : "";
+    return (
+      `<div class="detail-section detail-origin" id="detail-origin">` +
+      `<h3>Character origin</h3>` +
+      `<div class="origin-head">` +
+      `<div class="origin-char" aria-hidden="true">${escapeHtml(entry.char || ch)}</div>` +
+      `<div class="origin-head-text">` +
+      `<p class="origin-pinyin">${escapeHtml(entry.pinyin || "")}</p>` +
+      `<p class="origin-meaning">${escapeHtml(entry.meaning || "")}</p>` +
+      (type ? `<p class="origin-type-wrap">${type}</p>` : "") +
+      `</div></div>` +
+      formula +
+      partsHtml +
+      (entry.origin
+        ? `<div class="origin-block"><h4>Origin</h4><p>${escapeHtml(entry.origin)}</p></div>`
+        : "") +
+      (entry.history
+        ? `<div class="origin-block"><h4>History</h4><p>${escapeHtml(entry.history)}</p></div>`
+        : "") +
+      `</div>`
+    );
+  }
+
+  function wireOriginSelection() {
+    const root = els.detailBody;
+    if (!root) return;
+    root.querySelectorAll(".char-glyph").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const ch = btn.getAttribute("data-char") || "";
+        const panel = document.getElementById("detail-origin");
+        if (panel) panel.outerHTML = originPanelHtml(ch);
+        root.querySelectorAll(".char-glyph").forEach((b) => {
+          const active = b.getAttribute("data-char") === ch;
+          b.classList.toggle("is-active", active);
+          b.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+      });
+    });
+  }
+
+
   function openDetail(id) {
     const card = App.cards.find((c) => c.id === id);
     if (!card || !els.detail || !els.detailBody) return;
 
+    const selected = firstCjkChar(card.hanzi);
     const kws = Array.isArray(card.keywords) ? card.keywords : [];
     const kwHtml = kws
       .map(
@@ -320,8 +456,11 @@
       : `<button type="button" class="btn btn-primary btn-block" id="detail-status-btn" data-next="known">Mark as known</button>`;
 
     const audioLabel = card.audio ? "Play audio" : "Play pronunciation";
-    els.detailBody.innerHTML = `
-      <h2 id="detail-hanzi" class="detail-hanzi">${escapeHtml(card.hanzi)}</h2>
+    const glyphHtml = hanziGlyphButtons(card.hanzi, selected);
+
+    const paint = () => {
+      els.detailBody.innerHTML = `
+      <h2 id="detail-hanzi" class="detail-hanzi detail-hanzi-glyphs" aria-label="${escapeHtml(card.hanzi)}">${glyphHtml}</h2>
       <p class="detail-pinyin">${escapeHtml(card.pinyin)}</p>
       <div class="detail-meta">
         <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
@@ -333,6 +472,7 @@
       </div>
       <p class="detail-gloss">${escapeHtml(card.gloss)}</p>
       <div class="detail-status-actions">${statusAction}</div>
+      ${originPanelHtml(selected)}
       ${exampleBlock}
       <div class="detail-section">
         <h3>Keywords</h3>
@@ -341,30 +481,45 @@
       ${detailsBlock}
     `;
 
-    els.detailBody.querySelectorAll("[data-kw]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        closeDetail();
-        setKeywordFilter(btn.getAttribute("data-kw") || "");
-        showTab("library");
+      els.detailBody.querySelectorAll("[data-kw]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          closeDetail();
+          setKeywordFilter(btn.getAttribute("data-kw") || "");
+          showTab("library");
+        });
       });
-    });
 
-    const audioBtn = document.getElementById("detail-audio");
-    audioBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (window.VocabAudio) window.VocabAudio.play(card);
-    });
+      const audioBtn = document.getElementById("detail-audio");
+      audioBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (window.VocabAudio) window.VocabAudio.play(card);
+      });
 
-    const statusBtn = document.getElementById("detail-status-btn");
-    statusBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const next = statusBtn.getAttribute("data-next") || "known";
-      setCardStatus(card.id, next);
+      const statusBtn = document.getElementById("detail-status-btn");
+      statusBtn?.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const next = statusBtn.getAttribute("data-next") || "known";
+        setCardStatus(card.id, next);
+      });
+
+      wireOriginSelection();
+    };
+
+    paint();
+    ensureCharacters().then(() => {
+      // Refresh origin panel once data arrives (detail may still be open)
+      if (!els.detail || els.detail.hidden) return;
+      const still = App.cards.find((c) => c.id === id);
+      if (!still) return;
+      const activeBtn = els.detailBody.querySelector(".char-glyph.is-active");
+      const ch = (activeBtn && activeBtn.getAttribute("data-char")) || firstCjkChar(still.hanzi);
+      const panel = document.getElementById("detail-origin");
+      if (panel) panel.outerHTML = originPanelHtml(ch);
+      wireOriginSelection();
     });
 
     els.detail.hidden = false;
     els.detail.setAttribute("aria-hidden", "false");
-    // Bottom sheet locks scroll; side panel on wide layouts does not
     document.body.style.overflow = isWideLayout() ? "" : "hidden";
 
     if (location.hash !== `#word/${id}`) {
@@ -552,6 +707,7 @@
       renderKeywordChips();
       applyFilters();
       initStudyModules();
+      ensureCharacters();
       parseHash();
     } catch (err) {
       console.error(err);
