@@ -423,6 +423,9 @@
       `<h2 id="char-origin-title" class="char-origin-title">Character origin</h2>` +
       `</header>` +
       `<div id="char-origin-body" class="char-origin-body"></div>` +
+      `<footer class="char-origin-footer">` +
+      `<button type="button" class="btn btn-secondary btn-block" data-close-char-origin>Close</button>` +
+      `</footer>` +
       `</div>`;
     document.body.appendChild(overlay);
     return overlay;
@@ -432,36 +435,61 @@
     const overlay = document.getElementById("char-origin-overlay");
     if (!overlay) return;
     overlay.hidden = true;
+    overlay.classList.remove("is-open");
     overlay.setAttribute("aria-hidden", "true");
     document.body.classList.remove("char-origin-open");
   }
 
   function openCharacterOrigin(ch) {
     const overlay = ensureCharOriginOverlay();
+    wireCharOriginOverlay();
     const body = document.getElementById("char-origin-body");
     const title = document.getElementById("char-origin-title");
     if (body) body.innerHTML = characterOriginBodyHtml(ch || "");
     if (title) title.textContent = ch ? `Character ${ch}` : "Character origin";
+    if (overlay.parentElement !== document.body) {
+      document.body.appendChild(overlay);
+    }
     overlay.hidden = false;
+    overlay.classList.add("is-open");
     overlay.setAttribute("aria-hidden", "false");
     document.body.classList.add("char-origin-open");
     const closeBtn = overlay.querySelector("[data-close-char-origin]");
-    closeBtn?.focus();
+    if (closeBtn) closeBtn.focus();
   }
 
   function wireCharOriginOverlay() {
     const overlay = ensureCharOriginOverlay();
     if (overlay.dataset.wired === "1") return;
     overlay.dataset.wired = "1";
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay || e.target.closest("[data-close-char-origin]")) {
-        closeCharacterOrigin();
+
+    const onClose = (e) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
+      closeCharacterOrigin();
+    };
+
+    // Capture phase so study/detail handlers cannot swallow the close click
+    overlay.addEventListener(
+      "click",
+      (e) => {
+        if (e.target === overlay || e.target.closest("[data-close-char-origin]")) {
+          onClose(e);
+        }
+      },
+      true
+    );
+
+    overlay.querySelectorAll("[data-close-char-origin]").forEach((btn) => {
+      btn.addEventListener("click", onClose);
     });
+
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && overlay && !overlay.hidden) {
-        closeCharacterOrigin();
-      }
+      if (e.key !== "Escape") return;
+      if (!overlay.classList.contains("is-open") && overlay.hidden) return;
+      onClose(e);
     });
   }
 
@@ -783,7 +811,17 @@
     window.addEventListener("orientationchange", () => setTimeout(syncLayoutMode, 150));
 
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && els.detail && !els.detail.hidden) {
+      if (e.key !== "Escape") return;
+      const originOverlay = document.getElementById("char-origin-overlay");
+      if (
+        originOverlay &&
+        (!originOverlay.hidden || originOverlay.classList.contains("is-open"))
+      ) {
+        closeCharacterOrigin();
+        e.preventDefault();
+        return;
+      }
+      if (els.detail && !els.detail.hidden) {
         closeDetail();
       }
     });
