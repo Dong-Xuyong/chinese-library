@@ -315,18 +315,15 @@
         '<div class="flashcard-char-item">' +
           '<button type="button" class="flashcard-char-row" data-origin-toggle data-char="' +
           escapeHtml(ch) +
-          '" aria-expanded="false">' +
+          '" aria-haspopup="dialog">' +
           '<span class="flashcard-char-glyph">' +
           escapeHtml(ch) +
           '</span>' +
           '<span class="flashcard-char-meta">' +
           escapeHtml(meta || 'Origin & history') +
           '</span>' +
-          '<span class="flashcard-char-caret" aria-hidden="true">▸</span>' +
+          '<span class="flashcard-char-caret" aria-hidden="true">⤢</span>' +
           '</button>' +
-          '<div class="flashcard-char-panel" hidden>' +
-          flashcardCharPanelHtml(ch) +
-          '</div>' +
         '</div>'
       );
     }
@@ -344,19 +341,12 @@
       btn.addEventListener('click', function (e) {
         e.preventDefault();
         e.stopPropagation();
-        var item = btn.closest('.flashcard-char-item');
-        var panel = item ? item.querySelector('.flashcard-char-panel') : null;
-        if (!panel) return;
-        var open = btn.getAttribute('aria-expanded') === 'true';
-        var next = !open;
-        btn.setAttribute('aria-expanded', next ? 'true' : 'false');
-        btn.classList.toggle('is-open', next);
-        panel.hidden = !next;
-        if (next) {
-          // Refresh panel if characters loaded after first paint
-          var ch = btn.getAttribute('data-char') || '';
-          panel.innerHTML = flashcardCharPanelHtml(ch);
-        }
+        var ch = btn.getAttribute('data-char') || '';
+        ensureCharactersLoaded(function () {
+          if (global.App && typeof global.App.openCharacterOrigin === 'function') {
+            global.App.openCharacterOrigin(ch);
+          }
+        });
       });
     });
   }
@@ -421,8 +411,7 @@
           if (!panelRoot) return;
           panelRoot.querySelectorAll('.flashcard-char-item').forEach(function (item) {
             var btn = item.querySelector('[data-origin-toggle]');
-            var panel = item.querySelector('.flashcard-char-panel');
-            if (!btn || !panel) return;
+            if (!btn) return;
             var ch = btn.getAttribute('data-char') || '';
             var entry = getCharacterEntry(ch);
             var meta = entry
@@ -430,9 +419,6 @@
               : 'Origin & history';
             var metaEl = btn.querySelector('.flashcard-char-meta');
             if (metaEl) metaEl.textContent = meta;
-            if (btn.getAttribute('aria-expanded') === 'true') {
-              panel.innerHTML = flashcardCharPanelHtml(ch);
-            }
           });
         });
       } else {

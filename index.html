@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./css/styles.css?v=9" />
+  <link rel="stylesheet" href="./css/styles.css?v=10" />
 </head>
 <body>
   <div id="app" class="app">
@@ -160,12 +160,23 @@
     </div>
   </div>
 
-  <script src="./js/audio.js?v=9" defer></script>
-  <script src="./js/srs.js?v=9" defer></script>
-  <script src="./js/status.js?v=9" defer></script>
-  <script src="./js/journey.js?v=9" defer></script>
-  <script src="./js/cards.js?v=9" defer></script>
-  <script src="./js/progress.js?v=9" defer></script>
-  <script src="./js/app.js?v=9" defer></script>
+
+  <div id="char-origin-overlay" class="char-origin-overlay" hidden aria-hidden="true">
+    <div class="char-origin-sheet" role="dialog" aria-modal="true" aria-labelledby="char-origin-title">
+      <header class="char-origin-header">
+        <button type="button" class="char-origin-close" data-close-char-origin aria-label="Close">×</button>
+        <h2 id="char-origin-title" class="char-origin-title">Character origin</h2>
+      </header>
+      <div id="char-origin-body" class="char-origin-body"></div>
+    </div>
+  </div>
+
+  <script src="./js/audio.js?v=10" defer></script>
+  <script src="./js/srs.js?v=10" defer></script>
+  <script src="./js/status.js?v=10" defer></script>
+  <script src="./js/journey.js?v=10" defer></script>
+  <script src="./js/cards.js?v=10" defer></script>
+  <script src="./js/progress.js?v=10" defer></script>
+  <script src="./js/app.js?v=10" defer></script>
 </body>
 </html>

@@ -350,6 +350,122 @@
     return "";
   }
 
+
+  function characterOriginBodyHtml(ch) {
+    const entry = App.characters && App.characters[ch];
+    if (!entry) {
+      return (
+        `<div class="char-origin-empty-wrap">` +
+        `<div class="origin-char origin-char-lg">${escapeHtml(ch || "?")}</div>` +
+        `<p class="detail-origin-empty">Origin not available yet for ${escapeHtml(ch || "?")}.</p>` +
+        `</div>`
+      );
+    }
+    const comp = entry.composition || {};
+    const parts = Array.isArray(comp.parts) ? comp.parts : [];
+    const partsHtml = parts.length
+      ? `<ul class="origin-parts">` +
+        parts
+          .map((p) => {
+            return (
+              `<li><span class="origin-part-char">${escapeHtml(p.char || "")}</span>` +
+              `<span class="origin-part-role">${escapeHtml(p.role || "")}</span>` +
+              (p.note
+                ? `<span class="origin-part-note">${escapeHtml(p.note)}</span>`
+                : "") +
+              `</li>`
+            );
+          })
+          .join("") +
+        `</ul>`
+      : "";
+    const formula = comp.formula
+      ? `<p class="origin-formula">${escapeHtml(comp.formula)}</p>`
+      : "";
+    const type = comp.type
+      ? `<span class="origin-type">${escapeHtml(comp.type)}</span>`
+      : "";
+    return (
+      `<div class="origin-head origin-head-lg">` +
+      `<div class="origin-char origin-char-lg" aria-hidden="true">${escapeHtml(entry.char || ch)}</div>` +
+      `<div class="origin-head-text">` +
+      `<p class="origin-pinyin">${escapeHtml(entry.pinyin || "")}</p>` +
+      `<p class="origin-meaning">${escapeHtml(entry.meaning || "")}</p>` +
+      (type ? `<p class="origin-type-wrap">${type}</p>` : "") +
+      `</div></div>` +
+      `<section class="char-origin-section">` +
+      `<h3>Structure</h3>` +
+      (formula || partsHtml
+        ? formula + partsHtml
+        : `<p class="detail-origin-empty">No structure notes for this character.</p>`) +
+      `</section>` +
+      (entry.origin
+        ? `<section class="char-origin-section"><h3>Origin</h3><p>${escapeHtml(entry.origin)}</p></section>`
+        : "") +
+      (entry.history
+        ? `<section class="char-origin-section"><h3>History</h3><p>${escapeHtml(entry.history)}</p></section>`
+        : "")
+    );
+  }
+
+  function ensureCharOriginOverlay() {
+    let overlay = document.getElementById("char-origin-overlay");
+    if (overlay) return overlay;
+    overlay = document.createElement("div");
+    overlay.id = "char-origin-overlay";
+    overlay.className = "char-origin-overlay";
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    overlay.innerHTML =
+      `<div class="char-origin-sheet" role="dialog" aria-modal="true" aria-labelledby="char-origin-title">` +
+      `<header class="char-origin-header">` +
+      `<button type="button" class="char-origin-close" data-close-char-origin aria-label="Close">×</button>` +
+      `<h2 id="char-origin-title" class="char-origin-title">Character origin</h2>` +
+      `</header>` +
+      `<div id="char-origin-body" class="char-origin-body"></div>` +
+      `</div>`;
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function closeCharacterOrigin() {
+    const overlay = document.getElementById("char-origin-overlay");
+    if (!overlay) return;
+    overlay.hidden = true;
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("char-origin-open");
+  }
+
+  function openCharacterOrigin(ch) {
+    const overlay = ensureCharOriginOverlay();
+    const body = document.getElementById("char-origin-body");
+    const title = document.getElementById("char-origin-title");
+    if (body) body.innerHTML = characterOriginBodyHtml(ch || "");
+    if (title) title.textContent = ch ? `Character ${ch}` : "Character origin";
+    overlay.hidden = false;
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("char-origin-open");
+    const closeBtn = overlay.querySelector("[data-close-char-origin]");
+    closeBtn?.focus();
+  }
+
+  function wireCharOriginOverlay() {
+    const overlay = ensureCharOriginOverlay();
+    if (overlay.dataset.wired === "1") return;
+    overlay.dataset.wired = "1";
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay || e.target.closest("[data-close-char-origin]")) {
+        closeCharacterOrigin();
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay && !overlay.hidden) {
+        closeCharacterOrigin();
+      }
+    });
+  }
+
+
   function originPanelHtml(ch) {
     const entry = App.characters && App.characters[ch];
     if (!entry) {
@@ -420,6 +536,20 @@
           b.classList.toggle("is-active", active);
           b.setAttribute("aria-pressed", active ? "true" : "false");
         });
+        wireOriginExpandButtons();
+        openCharacterOrigin(ch);
+      });
+    });
+    wireOriginExpandButtons();
+  }
+
+  function wireOriginExpandButtons() {
+    const root = els.detailBody;
+    if (!root) return;
+    root.querySelectorAll("[data-open-char-origin]").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCharacterOrigin(btn.getAttribute("data-char") || "");
       });
     });
   }
@@ -533,6 +663,7 @@
   }
 
   function closeDetail() {
+    closeCharacterOrigin();
     if (!els.detail) return;
     els.detail.hidden = true;
     els.detail.setAttribute("aria-hidden", "true");
@@ -741,6 +872,8 @@
   App.applyFilters = applyFilters;
   App.ensureCharacters = ensureCharacters;
   App.getCharacter = getCharacter;
+  App.openCharacterOrigin = openCharacterOrigin;
+  App.closeCharacterOrigin = closeCharacterOrigin;
 
   wireEvents();
   syncLayoutMode();
