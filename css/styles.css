@@ -1104,6 +1104,145 @@ body {
   color: var(--paper-muted);
 }
 
+
+.flashcard-origins {
+  width: 100%;
+  max-width: 22em;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ink-line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+}
+
+.flashcard-origins-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper-muted);
+}
+
+.flashcard-char-item {
+  border: 1px solid var(--ink-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.flashcard-char-row {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flashcard-char-row:hover,
+.flashcard-char-row:focus-visible {
+  background: rgba(47, 181, 165, 0.12);
+  outline: none;
+}
+
+.flashcard-char-row.is-open {
+  background: rgba(47, 181, 165, 0.16);
+}
+
+.flashcard-char-glyph {
+  font-family: var(--font-zh);
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.flashcard-char-meta {
+  font-size: 0.85rem;
+  color: var(--paper-muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flashcard-char-caret {
+  color: var(--teal);
+  transition: transform 0.15s ease;
+}
+
+.flashcard-char-row.is-open .flashcard-char-caret {
+  transform: rotate(90deg);
+}
+
+.flashcard-char-panel {
+  padding: 0 12px 12px;
+  border-top: 1px solid var(--ink-line);
+}
+
+.flashcard-char-panel[hidden] {
+  display: none !important;
+}
+
+.flashcard-origin-meta {
+  margin: 10px 0 6px;
+  color: var(--teal);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.flashcard-origin-type {
+  margin: 0 0 6px;
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 181, 165, 0.35);
+  background: rgba(47, 181, 165, 0.12);
+  color: #9fe0d6;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.flashcard-origin-formula {
+  margin: 0 0 8px;
+  font-family: var(--font-zh);
+  font-size: 1rem;
+}
+
+.flashcard-origin-block {
+  margin-top: 8px;
+}
+
+.flashcard-origin-block h4 {
+  margin: 0 0 4px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--paper-muted);
+}
+
+.flashcard-origin-block p,
+.flashcard-origin-empty {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--paper-muted);
+}
+
 .study-actions {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

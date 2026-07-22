@@ -299,7 +299,12 @@
     );
   }
 
-  function ensureCharacters() {
+  function getCharacter(ch) {
+    if (!ch || !App.characters) return null;
+    return App.characters[ch] || null;
+  }
+
+    function ensureCharacters() {
     if (App.characters) return Promise.resolve(App.characters);
     if (App.charactersPromise) return App.charactersPromise;
     App.charactersPromise = fetch(CHARACTERS_URL)
@@ -734,6 +739,8 @@
   App.openDetail = openDetail;
   App.showTab = showTab;
   App.applyFilters = applyFilters;
+  App.ensureCharacters = ensureCharacters;
+  App.getCharacter = getCharacter;
 
   wireEvents();
   syncLayoutMode();

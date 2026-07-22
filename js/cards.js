@@ -217,6 +217,151 @@
     }
   }
 
+
+  function isCjkChar(ch) {
+    if (!ch) return false;
+    var code = ch.codePointAt(0);
+    return (
+      (code >= 0x4e00 && code <= 0x9fff) ||
+      (code >= 0x3400 && code <= 0x4dbf) ||
+      (code >= 0xf900 && code <= 0xfaff)
+    );
+  }
+
+  function cjkCharsFromHanzi(hanzi) {
+    var out = [];
+    var chars = Array.from(String(hanzi || ''));
+    for (var i = 0; i < chars.length; i++) {
+      if (isCjkChar(chars[i])) out.push(chars[i]);
+    }
+    return out;
+  }
+
+  function getCharacterEntry(ch) {
+    if (global.App && typeof global.App.getCharacter === 'function') {
+      return global.App.getCharacter(ch);
+    }
+    if (global.App && global.App.characters) return global.App.characters[ch] || null;
+    return null;
+  }
+
+  function ensureCharactersLoaded(thenFn) {
+    if (global.App && typeof global.App.ensureCharacters === 'function') {
+      global.App.ensureCharacters().then(function () {
+        if (typeof thenFn === 'function') thenFn();
+      });
+      return;
+    }
+    if (typeof thenFn === 'function') thenFn();
+  }
+
+  function flashcardCharPanelHtml(ch) {
+    var entry = getCharacterEntry(ch);
+    if (!entry) {
+      return (
+        '<p class="flashcard-origin-empty">Origin not available yet for ' +
+        escapeHtml(ch) +
+        '.</p>'
+      );
+    }
+    var comp = entry.composition || {};
+    var parts = [];
+    if (entry.pinyin || entry.meaning) {
+      parts.push(
+        '<p class="flashcard-origin-meta">' +
+          escapeHtml([entry.pinyin, entry.meaning].filter(Boolean).join(' · ')) +
+          '</p>'
+      );
+    }
+    if (comp.type) {
+      parts.push('<p class="flashcard-origin-type">' + escapeHtml(comp.type) + '</p>');
+    }
+    if (comp.formula) {
+      parts.push('<p class="flashcard-origin-formula">' + escapeHtml(comp.formula) + '</p>');
+    }
+    if (entry.origin) {
+      parts.push(
+        '<div class="flashcard-origin-block"><h4>Origin</h4><p>' +
+          escapeHtml(entry.origin) +
+          '</p></div>'
+      );
+    }
+    if (entry.history) {
+      parts.push(
+        '<div class="flashcard-origin-block"><h4>History</h4><p>' +
+          escapeHtml(entry.history) +
+          '</p></div>'
+      );
+    }
+    return parts.join('') || (
+      '<p class="flashcard-origin-empty">Origin not available yet for ' +
+      escapeHtml(ch) +
+      '.</p>'
+    );
+  }
+
+  function flashcardOriginsHtml(card) {
+    var chars = cjkCharsFromHanzi(card && card.hanzi);
+    if (!chars.length) return '';
+    var rows = [];
+    for (var i = 0; i < chars.length; i++) {
+      var ch = chars[i];
+      var entry = getCharacterEntry(ch);
+      var meta = '';
+      if (entry) {
+        meta = [entry.pinyin, entry.meaning].filter(Boolean).join(' · ');
+      }
+      rows.push(
+        '<div class="flashcard-char-item">' +
+          '<button type="button" class="flashcard-char-row" data-origin-toggle data-char="' +
+          escapeHtml(ch) +
+          '" aria-expanded="false">' +
+          '<span class="flashcard-char-glyph">' +
+          escapeHtml(ch) +
+          '</span>' +
+          '<span class="flashcard-char-meta">' +
+          escapeHtml(meta || 'Origin & history') +
+          '</span>' +
+          '<span class="flashcard-char-caret" aria-hidden="true">▸</span>' +
+          '</button>' +
+          '<div class="flashcard-char-panel" hidden>' +
+          flashcardCharPanelHtml(ch) +
+          '</div>' +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="flashcard-origins">' +
+      '<div class="flashcard-origins-label">Characters</div>' +
+      rows.join('') +
+      '</div>'
+    );
+  }
+
+  function wireOriginToggles(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-origin-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var item = btn.closest('.flashcard-char-item');
+        var panel = item ? item.querySelector('.flashcard-char-panel') : null;
+        if (!panel) return;
+        var open = btn.getAttribute('aria-expanded') === 'true';
+        var next = !open;
+        btn.setAttribute('aria-expanded', next ? 'true' : 'false');
+        btn.classList.toggle('is-open', next);
+        panel.hidden = !next;
+        if (next) {
+          // Refresh panel if characters loaded after first paint
+          var ch = btn.getAttribute('data-char') || '';
+          panel.innerHTML = flashcardCharPanelHtml(ch);
+        }
+      });
+    });
+  }
+
+
   function renderCard() {
     var card = currentCard();
     if (!card) {
@@ -256,6 +401,7 @@
             '<button type="button" class="btn btn-primary btn-mark-known" data-mark-known>Mark as known</button>'
           );
         }
+        parts.push(flashcardOriginsHtml(card));
         if (card.example || card.exampleEn) {
           parts.push(
             '<div class="flashcard-example">' +
@@ -268,6 +414,27 @@
         setVisible(els.back, true);
         wireAudioButton(els.back, card);
         wireMarkKnown(els.back, card);
+        wireOriginToggles(els.back);
+        ensureCharactersLoaded(function () {
+          if (!session.flipped || currentCard() !== card) return;
+          var panelRoot = els.back;
+          if (!panelRoot) return;
+          panelRoot.querySelectorAll('.flashcard-char-item').forEach(function (item) {
+            var btn = item.querySelector('[data-origin-toggle]');
+            var panel = item.querySelector('.flashcard-char-panel');
+            if (!btn || !panel) return;
+            var ch = btn.getAttribute('data-char') || '';
+            var entry = getCharacterEntry(ch);
+            var meta = entry
+              ? [entry.pinyin, entry.meaning].filter(Boolean).join(' · ')
+              : 'Origin & history';
+            var metaEl = btn.querySelector('.flashcard-char-meta');
+            if (metaEl) metaEl.textContent = meta;
+            if (btn.getAttribute('aria-expanded') === 'true') {
+              panel.innerHTML = flashcardCharPanelHtml(ch);
+            }
+          });
+        });
       } else {
         els.back.innerHTML = '';
         setVisible(els.back, false);
@@ -369,6 +536,7 @@
     session.index = 0;
     session.flipped = false;
     session.totalDueAtStart = queue.length;
+    ensureCharactersLoaded();
 
     if (!queue.length) {
       setVisible(els.idle, true);
@@ -467,6 +635,7 @@
     if (els.flashcard) {
       els.flashcard.addEventListener('click', function (e) {
         if (e.target.closest('[data-audio-btn]')) return;
+        if (e.target.closest('[data-origin-toggle], .flashcard-char-panel, .flashcard-origins')) return;
         if (!session.flipped) flip();
       });
       els.flashcard.addEventListener('keydown', function (e) {
