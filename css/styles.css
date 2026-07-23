@@ -1,18 +1,18 @@
 /* More Life Chinese — mobile-first design system */
 
-:root {
-  /* Surfaces — deep ink, slightly cooler than pure black */
-  --ink: #0a0e12;
-  --ink-elevated: #131a22;
-  --ink-soft: #1a2330;
-  --ink-line: #2a3544;
-  --ink-line-soft: rgba(42, 53, 68, 0.55);
-  --ink-wash: rgba(19, 26, 34, 0.92);
+:root,
+html.dark {
+  /* Surfaces / text — remapped to dong-ui tokens (ink = bg, paper = fg) */
+  --ink: hsl(var(--background));
+  --ink-elevated: hsl(var(--card));
+  --ink-soft: hsl(var(--secondary));
+  --ink-line: hsl(var(--border));
+  --ink-line-soft: hsl(var(--border) / 0.55);
+  --ink-wash: hsl(var(--card) / 0.92);
 
-  /* Text */
-  --paper: #f2eee6;
-  --paper-muted: #8f877c;
-  --paper-faint: #6d665c;
+  --paper: hsl(var(--foreground));
+  --paper-muted: hsl(var(--muted-foreground));
+  --paper-faint: hsl(var(--muted-foreground));
 
   /* Accents — vermillion seal + teal annotation */
   --vermillion: #e06a2e;
@@ -66,12 +66,12 @@
   --rail-w: 88px;
   --page-pad: clamp(12px, 2vw, 28px);
   --shell-max: 100%;
-  --font-ui: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font-ui: var(--font-sans);
   --font-zh: "Noto Serif SC", "Songti SC", "SimSun", serif;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --chrome-top: env(safe-area-inset-top, 0px);
   --chrome-bottom: calc(var(--tab-h) + env(safe-area-inset-bottom, 0px));
-  color-scheme: dark;
+  color-scheme: light dark;
 }
 
 *,
@@ -94,9 +94,9 @@ body {
 
 body {
   background:
-    radial-gradient(ellipse 85% 50% at 0% -8%, rgba(224, 106, 46, 0.12), transparent 52%),
-    radial-gradient(ellipse 65% 42% at 100% 0%, rgba(47, 181, 165, 0.09), transparent 48%),
-    linear-gradient(180deg, #10161e 0%, var(--ink) 42%);
+    radial-gradient(ellipse 85% 50% at 0% -8%, rgba(224, 106, 46, 0.07), transparent 52%),
+    radial-gradient(ellipse 65% 42% at 100% 0%, rgba(47, 181, 165, 0.05), transparent 48%),
+    linear-gradient(180deg, var(--ink-elevated) 0%, var(--ink) 42%);
   background-attachment: fixed;
 }
 
@@ -230,7 +230,7 @@ body {
   z-index: 2;
   padding-bottom: 2px;
   background:
-    linear-gradient(180deg, rgba(10, 14, 18, 0.97) 70%, rgba(10, 14, 18, 0.88) 100%);
+    linear-gradient(180deg, hsl(var(--background) / 0.97) 70%, hsl(var(--background) / 0.88) 100%);
 }
 
 /* Library brand moment — scholarly, compact */
@@ -687,7 +687,7 @@ body {
   padding: 12px 20px calc(28px + env(safe-area-inset-bottom, 0px));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   background:
-    linear-gradient(180deg, #1a2330 0%, var(--ink-elevated) 32%);
+    linear-gradient(180deg, var(--ink-soft) 0%, var(--ink-elevated) 32%);
   border: 1px solid var(--ink-line);
   border-bottom: none;
   box-shadow: var(--shadow);
@@ -1205,8 +1205,8 @@ body {
   border: 1px solid var(--ink-line);
   border-radius: 24px;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(47, 181, 165, 0.12), transparent 55%),
-    linear-gradient(165deg, #1a232e, var(--ink-elevated));
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(47, 181, 165, 0.1), transparent 55%),
+    linear-gradient(165deg, var(--ink-soft), var(--ink-elevated));
   color: inherit;
   font: inherit;
   text-align: center;
@@ -1582,9 +1582,9 @@ body {
   height: var(--chrome-bottom);
   padding: 8px var(--page-pad) calc(10px + env(safe-area-inset-bottom, 0px));
   gap: 8px;
-  background: rgba(12, 16, 20, 0.92);
+  background: hsl(var(--background) / 0.92);
   backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(44, 55, 68, 0.8);
+  border-top: 1px solid hsl(var(--border) / 0.8);
   order: 2;
 }
 
@@ -2261,8 +2261,8 @@ body {
     padding: 20px 10px;
     gap: 10px;
     border-top: none;
-    border-right: 1px solid rgba(44, 55, 68, 0.8);
-    background: rgba(12, 16, 20, 0.96);
+    border-right: 1px solid hsl(var(--border) / 0.8);
+    background: hsl(var(--background) / 0.96);
   }
 
   .tab {
@@ -2359,7 +2359,7 @@ body {
     padding: 0;
     border: 1px solid var(--ink-line);
     border-radius: var(--radius);
-    background: rgba(19, 26, 34, 0.5);
+    background: hsl(var(--card) / 0.5);
     /* Dense 2-col when detail sheet is closed (or overlay-only <1100px) */
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2512,7 +2512,7 @@ body {
   }
 
   .card-list {
-    background: rgba(19, 26, 34, 0.55);
+    background: hsl(var(--card) / 0.55);
   }
 }
 
@@ -2675,7 +2675,7 @@ body {
   flex: 0 0 auto;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--ink-line);
-  background: rgba(12, 16, 20, 0.96);
+  background: hsl(var(--background) / 0.96);
 }
 
 body.char-origin-open {
