@@ -53,7 +53,7 @@
     els.progressFill = $('study-progress-fill');
     els.empty = $('study-empty') || ensureEl('study-empty', 'div', els.idle || view, 'study-empty');
     if (els.empty && !els.empty.textContent.trim()) {
-      els.empty.textContent = 'No due cards match this filter.';
+      els.empty.textContent = 'No due cards in this topic. Widen the filter — the desk will fill again.';
     }
 
     els.flashcard = $('flashcard') || ensureEl('flashcard', 'div', els.session, 'flashcard');
@@ -359,7 +359,7 @@
       setVisible(els.reveal, false);
       showRatingButtons(false);
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'No due cards match this filter.';
+      if (els.empty) els.empty.textContent = 'No due cards in this topic. Widen the filter — the desk will fill again.';
       updateProgress();
       return;
     }
@@ -528,7 +528,7 @@
       setVisible(els.idle, true);
       setVisible(els.session, false);
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'No cards due. Check back later or widen filters.';
+      if (els.empty) els.empty.textContent = 'Your desk is clear — no cards due. Widen filters, or return tomorrow.';
       return;
     }
 
@@ -569,7 +569,7 @@
       setVisible(els.session, false);
       setVisible(els.idle, true);
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Session complete. Start again anytime.';
+      if (els.empty) els.empty.textContent = 'Session complete. The page turns — start again anytime.';
       return;
     }
 

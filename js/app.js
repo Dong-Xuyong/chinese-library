@@ -135,7 +135,11 @@
   function renderList() {
     if (!els.list) return;
     if (!App.filtered.length) {
-      els.list.innerHTML = `<p class="list-empty">No words match these filters.</p>`;
+      els.list.innerHTML =
+        `<p class="list-empty">` +
+        `<span class="list-empty-title">此架暂空</span>` +
+        `<span class="list-empty-hint">Nothing on this shelf. Clear a filter or try a broader search.</span>` +
+        `</p>`;
       return;
     }
 
@@ -683,6 +687,7 @@
 
     els.detail.hidden = false;
     els.detail.setAttribute("aria-hidden", "false");
+    document.body.classList.add("detail-open");
     document.body.style.overflow = isWideLayout() ? "" : "hidden";
 
     if (location.hash !== `#word/${id}`) {
@@ -695,6 +700,7 @@
     if (!els.detail) return;
     els.detail.hidden = true;
     els.detail.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("detail-open");
     document.body.style.overflow = "";
     if (location.hash.startsWith("#word/")) {
       history.replaceState(null, "", "#library");

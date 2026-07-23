@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./css/styles.css?v=11" />
+  <link rel="stylesheet" href="./css/styles.css?v=12" />
 </head>
 <body>
   <div id="app" class="app">
@@ -37,6 +37,11 @@
     <main class="main">
       <section id="view-library" class="view view-library" aria-label="Library">
         <div class="library-toolbar">
+          <header class="library-masthead">
+            <p class="library-wordmark">More Life</p>
+            <p class="library-wordmark-zh" lang="zh-Hans">多生活</p>
+          </header>
+
           <label class="search-field">
             <span class="search-icon" aria-hidden="true">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -76,7 +81,7 @@
             </div>
           </div>
 
-          <p id="stats-line" class="stats-line" aria-live="polite">Loading…</p>
+          <p id="stats-line" class="stats-line" aria-live="polite">Gathering the shelves…</p>
         </div>
 
         <div id="card-list" class="card-list" role="list"></div>
@@ -109,7 +114,7 @@
           </div>
 
           <button type="button" id="study-start" class="btn btn-primary btn-block">Start study</button>
-          <p id="study-empty" class="study-empty" hidden>No cards due. Check back later or widen filters.</p>
+          <p id="study-empty" class="study-empty" hidden>Your desk is clear — no cards due. Widen filters, or return tomorrow.</p>
         </div>
 
         <div id="study-session" class="study-session" hidden>
@@ -150,11 +155,11 @@
 
       <section id="view-progress" class="view view-progress" hidden aria-label="Progress">
         <div id="progress-root" class="progress-root">
-          <p class="progress-loading">Loading charts…</p>
+          <p class="progress-loading">Tracing your path…</p>
         </div>
       </section>
 
-      <div id="loading-banner" class="banner banner-loading" hidden>Loading vocabulary…</div>
+      <div id="loading-banner" class="banner banner-loading" hidden>Opening the library…</div>
       <div id="error-banner" class="banner banner-error" hidden></div>
     </main>
     </div>
@@ -174,12 +179,12 @@
     </div>
   </div>
 
-  <script src="./js/audio.js?v=11" defer></script>
-  <script src="./js/srs.js?v=11" defer></script>
-  <script src="./js/status.js?v=11" defer></script>
-  <script src="./js/journey.js?v=11" defer></script>
-  <script src="./js/cards.js?v=11" defer></script>
-  <script src="./js/progress.js?v=11" defer></script>
-  <script src="./js/app.js?v=11" defer></script>
+  <script src="./js/audio.js?v=12" defer></script>
+  <script src="./js/srs.js?v=12" defer></script>
+  <script src="./js/status.js?v=12" defer></script>
+  <script src="./js/journey.js?v=12" defer></script>
+  <script src="./js/cards.js?v=12" defer></script>
+  <script src="./js/progress.js?v=12" defer></script>
+  <script src="./js/app.js?v=12" defer></script>
 </body>
 </html>

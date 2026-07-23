@@ -175,7 +175,7 @@
 
   function barRows(items, total, dataAttr) {
     if (!items.length) {
-      return '<p class="progress-empty">No data yet.</p>';
+      return '<p class="progress-empty">The ledger is blank — study a few cards to begin.</p>';
     }
     var max = Math.max.apply(
       null,
@@ -275,7 +275,7 @@
 
   function curveSvg(series) {
     if (!series.length) {
-      return '<p class="progress-empty">No journey history yet.</p>';
+      return '<p class="progress-empty">No journey marks yet. Known words will gather here.</p>';
     }
     var W = 320;
     var H = 160;
