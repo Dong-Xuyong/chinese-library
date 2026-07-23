@@ -1179,7 +1179,7 @@ body {
   color: var(--paper-muted);
   border: 1px dashed var(--ink-line);
   border-radius: var(--radius);
-  background: rgba(22, 29, 38, 0.4);
+  background: var(--ink-soft);
 }
 
 .study-session {
@@ -1915,7 +1915,7 @@ body {
   padding: 16px;
   border-radius: var(--radius);
   border: 1px solid var(--ink-line);
-  background: rgba(22, 29, 38, 0.72);
+  background: var(--ink-elevated);
 }
 
 .progress-card h2 {
