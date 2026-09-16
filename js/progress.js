@@ -258,7 +258,9 @@
         })
         .join("") +
       "</div>" +
-      '<button type="button" class="btn btn-primary btn-block" id="progress-study-due">Study due cards</button>'
+      '<button type="button" class="primary-action" id="progress-study-due">' +
+      "<span><small>Spaced repetition</small><strong>Study due cards</strong></span>" +
+      '<span class="primary-arrow" aria-hidden="true">→</span></button>'
     );
   }
 
@@ -541,7 +543,9 @@
 
     return (
       '<article class="progress-card progress-card-journey">' +
-      "<h2>Learning journey</h2>" +
+      '<div class="section-heading">' +
+      '<div><span class="eyebrow">Your path</span><h2>Learning journey</h2></div>' +
+      "</div>" +
       '<p class="progress-hint">History from vault · From today saved on this phone</p>' +
       '<div class="journey-legend" aria-hidden="true">' +
       '<span><i class="swatch swatch-known"></i> Known</span>' +
@@ -572,12 +576,52 @@
     );
   }
 
+  function dashboardHero(data) {
+    var due = (data.srs && data.srs.due) || 0;
+    return (
+      '<section class="level-card" aria-labelledby="progress-level-title">' +
+      '<div class="level-orb" aria-hidden="true">' +
+      data.knownPct +
+      "%</div>" +
+      '<div class="level-main">' +
+      '<span class="eyebrow">Current mastery</span>' +
+      '<h2 id="progress-level-title">Known words</h2>' +
+      "<p>" +
+      data.known +
+      " / " +
+      data.total +
+      " in the library</p>" +
+      '<div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+      data.knownPct +
+      '" aria-label="' +
+      data.knownPct +
+      '% known">' +
+      '<span class="progress-fill" style="width:' +
+      data.knownPct +
+      '%"></span></div></div>' +
+      "<strong>" +
+      data.known +
+      " known</strong></section>" +
+      '<div class="status-stats">' +
+      "<div><strong>" +
+      data.known +
+      "</strong><span>Known</span></div>" +
+      "<div><strong>" +
+      data.learning +
+      "</strong><span>Learning</span></div>" +
+      "<div><strong>" +
+      due +
+      "</strong><span>Due today</span></div></div>"
+    );
+  }
+
   function renderHtml(data, built, cards) {
     return (
+      dashboardHero(data) +
       '<div class="progress-grid">' +
       journeyHtml(built || { series: [], milestones: [] }, cards) +
       '<article class="progress-card progress-card-mastery">' +
-      "<h2>Mastery</h2>" +
+      '<div class="section-heading"><div><span class="eyebrow">Retention</span><h2>Mastery</h2></div></div>' +
       '<div class="mastery-wrap">' +
       donutSvg(data.known, data.learning) +
       '<ul class="mastery-legend">' +
@@ -592,11 +636,11 @@
       "</strong></li>" +
       "</ul></div></article>" +
       '<article class="progress-card progress-card-srs">' +
-      "<h2>SRS today</h2>" +
+      '<div class="section-heading"><div><span class="eyebrow">Spaced repetition</span><h2>SRS today</h2></div></div>' +
       srsMeter(data.srs) +
       "</article>" +
       '<article class="progress-card progress-card-audio">' +
-      "<h2>Audio coverage</h2>" +
+      '<div class="section-heading"><div><span class="eyebrow">Listening</span><h2>Audio coverage</h2></div></div>' +
       '<div class="audio-meter" role="img" aria-label="' +
       data.audioPct +
       "% with audio\">" +
@@ -611,13 +655,13 @@
       data.audioPct +
       "%</strong></p></article>" +
       '<article class="progress-card progress-card-topics">' +
-      "<h2>Topics</h2>" +
+      '<div class="section-heading"><div><span class="eyebrow">Library</span><h2>Topics</h2></div></div>' +
       '<p class="progress-hint">Tap a topic to open it in Library</p>' +
       '<div class="progress-bars" id="progress-topics">' +
       barRows(data.themes, data.total, "topic") +
       "</div></article>" +
       '<article class="progress-card progress-card-pos">' +
-      "<h2>Parts of speech</h2>" +
+      '<div class="section-heading"><div><span class="eyebrow">Grammar</span><h2>Parts of speech</h2></div></div>' +
       '<p class="progress-hint">Tap a POS to filter Library</p>' +
       '<div class="progress-bars" id="progress-pos">' +
       barRows(data.pos, data.total, "pos") +

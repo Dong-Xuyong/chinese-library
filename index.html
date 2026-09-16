@@ -16,36 +16,43 @@
   <link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="./dong-ui/theme.js"></script>
   <link rel="stylesheet" href="./dong-ui/theme.css?v=3" />
-  <link rel="stylesheet" href="./css/styles.css?v=15" />
+  <link rel="stylesheet" href="./css/styles.css?v=19" />
 </head>
 <body>
-  <button type="button" data-dong-theme-toggle aria-label="Toggle color theme"></button>
+  <a class="skip-link" href="#view-root">Skip to content</a>
   <div id="app" class="app">
-    <nav class="tab-bar" aria-label="Primary">
+    <header id="topbar">
+      <h1 id="topbar-title">More Life Chinese</h1>
+      <button type="button" data-dong-theme-toggle aria-label="Toggle color theme"></button>
+    </header>
+
+    <div class="app-body">
+    <nav class="tab-bar" aria-label="Primary navigation">
       <button type="button" class="tab is-active" data-tab="library" aria-controls="view-library">
         <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h7v14H4zM13 5h7v14h-7z"/><path d="M8 8h1M8 12h1M17 8h1M17 12h1"/></svg>
-        Library
+        <span>Library</span>
       </button>
       <button type="button" class="tab" data-tab="study" aria-controls="view-study">
         <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>
-        Study
+        <span>Study</span>
       </button>
       <button type="button" class="tab" data-tab="progress" aria-controls="view-progress">
         <svg class="tab-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19V5M10 19V9M16 19v-6M22 19H2"/><path d="M10 9l3-3 3 2 4-5"/></svg>
-        Progress
+        <span>Progress</span>
       </button>
     </nav>
 
     <div class="app-shell">
-    <main class="main">
+    <main id="view-root" class="main" tabindex="-1">
       <section id="view-library" class="view view-library" aria-label="Library">
         <div class="library-toolbar">
           <header class="library-masthead">
-            <p class="library-eyebrow">More Life Chinese</p>
+            <p class="library-eyebrow eyebrow">More Life Chinese</p>
             <h1 class="library-title">
               <span class="library-title-zh" lang="zh-Hans">词库</span>
               <span class="library-title-en">Library</span>
             </h1>
+            <p id="stats-line" class="stats-line" aria-live="polite">Gathering the shelves…</p>
           </header>
 
           <label class="search-field">
@@ -86,8 +93,6 @@
               <div id="keyword-chips" class="keyword-chips" aria-label="Keyword filters"></div>
             </div>
           </div>
-
-          <p id="stats-line" class="stats-line" aria-live="polite">Gathering the shelves…</p>
         </div>
 
         <div id="card-list" class="card-list" role="list"></div>
@@ -169,6 +174,7 @@
       <div id="error-banner" class="banner banner-error" hidden></div>
     </main>
     </div>
+    </div>
   </div>
 
 
@@ -190,7 +196,7 @@
   <script src="./js/status.js?v=12" defer></script>
   <script src="./js/journey.js?v=12" defer></script>
   <script src="./js/cards.js?v=12" defer></script>
-  <script src="./js/progress.js?v=12" defer></script>
-  <script src="./js/app.js?v=12" defer></script>
+  <script src="./js/progress.js?v=13" defer></script>
+  <script src="./js/app.js?v=13" defer></script>
 </body>
 </html>

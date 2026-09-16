@@ -267,6 +267,63 @@
     history.replaceState(null, "", "#library");
   }
 
+  function studyDueCount() {
+    if (!window.SRS || typeof window.SRS.stats !== "function") return 0;
+    const ids = App.cards.filter((c) => c.status !== "known").map((c) => c.id);
+    const srs = window.SRS.stats(ids);
+    return (srs && srs.due) || 0;
+  }
+
+  function enhanceStudyDashboard() {
+    const idle = document.getElementById("study-idle");
+    const start = document.getElementById("study-start");
+    const hero = idle && idle.querySelector(".study-hero");
+    const title = idle && idle.querySelector(".study-title");
+    const lead = idle && idle.querySelector(".study-lead");
+    const bar = document.querySelector("#study-session .study-progress-bar");
+    const fill = document.getElementById("study-progress-fill");
+
+    if (hero) {
+      hero.classList.add("learning-hero");
+      hero.removeAttribute("aria-hidden");
+      if (title && !title.id) title.id = "study-title";
+      if (title) hero.setAttribute("aria-labelledby", title.id);
+      if (!hero.querySelector(".hero-topline")) {
+        const topline = document.createElement("div");
+        topline.className = "hero-topline";
+        topline.innerHTML =
+          '<span class="eyebrow">Study</span><span class="hero-xp" id="study-hero-due"></span>';
+        hero.insertBefore(topline, hero.firstChild);
+      }
+      if (title && !hero.contains(title)) hero.appendChild(title);
+      if (lead && !hero.contains(lead)) hero.appendChild(lead);
+    }
+
+    if (start) {
+      start.classList.add("primary-action");
+      if (!start.querySelector("strong")) {
+        start.innerHTML =
+          '<span><small id="study-start-meta">Anki-style review</small><strong>Start study</strong></span>' +
+          '<span class="primary-arrow" aria-hidden="true">→</span>';
+      }
+    }
+
+    if (bar) {
+      bar.classList.add("progress-track");
+      bar.setAttribute("role", "progressbar");
+      bar.setAttribute("aria-valuemin", "0");
+      bar.setAttribute("aria-valuemax", "100");
+    }
+    if (fill) fill.classList.add("progress-fill");
+
+    const due = studyDueCount();
+    const dueLabel = due === 1 ? "1 card due" : due + " cards due";
+    const dueEl = document.getElementById("study-hero-due");
+    const metaEl = document.getElementById("study-start-meta");
+    if (dueEl) dueEl.textContent = due ? dueLabel : "Ready when you are";
+    if (metaEl) metaEl.textContent = due ? dueLabel : "Anki-style review";
+  }
+
   function recomputeCounts() {
     if (window.StatusStore) {
       App.counts = window.StatusStore.counts(App.cards);
@@ -277,6 +334,7 @@
         known: App.cards.filter((c) => c.status === "known").length,
       };
     }
+    enhanceStudyDashboard();
   }
 
   function setCardStatus(id, status) {
