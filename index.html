@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -174,6 +174,8 @@
           <p class="progress-hint">Export here, then Import on your other device. Import merges, so nothing is lost.</p>
           <button type="button" class="btn btn-secondary" id="export-progress">Export progress</button>
           <button type="button" class="btn btn-secondary" id="import-progress">Import and merge</button>
+          <button type="button" class="btn btn-secondary" id="github-save">Save to GitHub</button>
+          <button type="button" class="btn btn-secondary" id="github-load">Import from GitHub</button>
           <input type="file" id="import-progress-file" accept=".json,application/json" hidden>
         </article>
       </section>
@@ -206,6 +208,7 @@
   <script src="./js/cards.js?v=12" defer></script>
   <script src="./js/progress.js?v=13" defer></script>
   <script src="./js/app.js?v=13" defer></script>
-  <script src="./js/backup.js?v=1" defer></script>
+  <script src="./dong-ui/gh-sync.js?v=1" defer></script>
+  <script src="./js/backup.js?v=2" defer></script>
 </body>
 </html>

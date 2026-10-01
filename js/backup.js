@@ -89,9 +89,24 @@
     };
   }
 
+  function payload() {
+    return Object.assign({ app: APP, version: 1, exportedAt: new Date().toISOString() }, readAll());
+  }
+
+  function applyData(data) {
+    if (!data || data.app !== APP) throw new Error("This file is not a Chinese Library backup");
+    var local = readAll();
+    if (localStorage.getItem(APP + "-pre-import") == null) {
+      localStorage.setItem(APP + "-pre-import", JSON.stringify(local));
+    }
+    var merged = merge(local, data);
+    Object.keys(KEYS).forEach(function (k) {
+      localStorage.setItem(KEYS[k], JSON.stringify(merged[k]));
+    });
+  }
+
   function exportFile() {
-    var payload = Object.assign({ app: APP, version: 1, exportedAt: new Date().toISOString() }, readAll());
-    var blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+    var blob = new Blob([JSON.stringify(payload())], { type: "application/json" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = APP + "-progress-" + new Date().toISOString().slice(0, 10) + ".json";
@@ -107,20 +122,28 @@
       alert("Not a valid JSON file");
       return;
     }
-    if (!data || data.app !== APP) {
-      alert("This file is not a Chinese Library backup");
+    try {
+      applyData(data);
+    } catch (e) {
+      alert(e.message);
       return;
     }
-    var local = readAll();
-    if (localStorage.getItem(APP + "-pre-import") == null) {
-      localStorage.setItem(APP + "-pre-import", JSON.stringify(local));
-    }
-    var merged = merge(local, data);
-    Object.keys(KEYS).forEach(function (k) {
-      localStorage.setItem(KEYS[k], JSON.stringify(merged[k]));
-    });
     alert("Merged " + Object.keys(data.srs || {}).length + " study cards from backup");
     location.reload();
+  }
+
+  function githubSync(mode) {
+    if (!global.GhSync) return alert("GitHub sync unavailable");
+    var run = mode === "save" ? global.GhSync.save(APP, payload, applyData) : global.GhSync.load(APP, applyData);
+    run.then(
+      function (msg) {
+        alert(msg);
+        location.reload();
+      },
+      function (e) {
+        alert(e.message);
+      }
+    );
   }
 
   function wire() {
@@ -130,6 +153,10 @@
     if (!file || !exp || !imp) return;
     exp.addEventListener("click", exportFile);
     imp.addEventListener("click", function () { file.click(); });
+    var ghSave = document.getElementById("github-save");
+    var ghLoad = document.getElementById("github-load");
+    if (ghSave) ghSave.addEventListener("click", function () { githubSync("save"); });
+    if (ghLoad) ghLoad.addEventListener("click", function () { githubSync("load"); });
     file.addEventListener("change", function () {
       var f = file.files && file.files[0];
       if (f) f.text().then(importText);
