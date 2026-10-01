@@ -168,6 +168,13 @@
         <div id="progress-root" class="progress-root">
           <p class="progress-loading">Tracing your path…</p>
         </div>
+        <article class="progress-card progress-backup">
+          <div class="section-heading"><div><span class="eyebrow">Backup</span><h2>Sync between devices</h2></div></div>
+          <p class="progress-hint">Export here, then Import on your other device. Import merges, so nothing is lost.</p>
+          <button type="button" class="btn btn-secondary" id="export-progress">Export progress</button>
+          <button type="button" class="btn btn-secondary" id="import-progress">Import and merge</button>
+          <input type="file" id="import-progress-file" accept=".json,application/json" hidden>
+        </article>
       </section>
 
       <div id="loading-banner" class="banner banner-loading" hidden>Opening the library…</div>
@@ -192,11 +199,12 @@
   </div>
 
   <script src="./js/audio.js?v=12" defer></script>
-  <script src="./js/srs.js?v=12" defer></script>
+  <script src="./js/srs.js?v=13" defer></script>
   <script src="./js/status.js?v=12" defer></script>
   <script src="./js/journey.js?v=12" defer></script>
   <script src="./js/cards.js?v=12" defer></script>
   <script src="./js/progress.js?v=13" defer></script>
   <script src="./js/app.js?v=13" defer></script>
+  <script src="./js/backup.js?v=1" defer></script>
 </body>
 </html>

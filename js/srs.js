@@ -108,6 +108,7 @@
     card.interval = interval;
     card.repetitions = repetitions;
     card.lapses = lapses;
+    card.last = now;
 
     state[id] = card;
     save(state);
