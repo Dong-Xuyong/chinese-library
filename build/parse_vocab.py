@@ -566,6 +566,18 @@ def build_output(
         audio_out or DEFAULT_AUDIO_OUT,
     )
 
+    # Level-1 supplement is committed separately so an Obsidian rebuild cannot
+    # drop or overwrite it. Ids above are already assigned; this only appends.
+    try:
+        from merge_common3500 import merge_cards as merge_common_cards
+    except ImportError:  # running as a script from build/
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from merge_common3500 import merge_cards as merge_common_cards
+
+    merged = merge_common_cards(merged)
+
     learning_n = sum(1 for c in merged if c["status"] == "learning")
     known_n = sum(1 for c in merged if c["status"] == "known")
     audio_n = sum(1 for c in merged if c.get("audio"))
@@ -646,6 +658,17 @@ def main() -> int:
         f"audio: embeds={stats['with_embed']} copied={stats['copied']} "
         f"missing={stats['missing']} removed={stats['removed']}"
     )
+
+    try:
+        from merge_common3500 import apply_characters_file
+    except ImportError:
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from merge_common3500 import apply_characters_file
+
+    added_chars = apply_characters_file()
+    print(f"common-3500 character entries added: {added_chars}")
 
     # Refresh learning-journey series from vault git history when available.
     try:

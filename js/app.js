@@ -30,6 +30,7 @@
   window.App = App;
 
   const THEME_KEYWORDS = [
+    "common-3500",
     "food",
     "emotion",
     "work",
@@ -145,23 +146,43 @@
 
     const frag = document.createDocumentFragment();
     for (const card of App.filtered) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "list-row";
-      btn.setAttribute("role", "listitem");
-      btn.dataset.id = card.id;
-      btn.innerHTML = `
+      const row = document.createElement("div");
+      row.className = "list-row";
+      row.setAttribute("role", "listitem");
+      row.dataset.id = card.id;
+
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "list-open";
+      open.innerHTML = `
         <span class="list-hanzi">${escapeHtml(card.hanzi)}${
           card.audio
             ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
             : ""
         }</span>
-        <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
         <span class="list-pinyin">${escapeHtml(card.pinyin)}</span>
         <span class="list-gloss">${escapeHtml(card.gloss)}</span>
       `;
-      btn.addEventListener("click", () => openDetail(card.id));
-      frag.appendChild(btn);
+      open.addEventListener("click", () => openDetail(card.id));
+
+      const next = card.status === "known" ? "learning" : "known";
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = `badge badge-${card.status} list-status`;
+      pill.textContent = card.status;
+      pill.setAttribute(
+        "aria-label",
+        next === "known"
+          ? `Mark ${card.hanzi} as known`
+          : `Mark ${card.hanzi} as learning`
+      );
+      pill.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setCardStatus(card.id, next);
+      });
+
+      row.append(open, pill);
+      frag.appendChild(row);
     }
     els.list.replaceChildren(frag);
   }
@@ -340,14 +361,18 @@
   function setCardStatus(id, status) {
     const card = App.cards.find((c) => c.id === id);
     if (!card || !window.StatusStore) return;
+    const scroll = els.list ? els.list.scrollTop : 0;
     window.StatusStore.setCardStatus(card, status);
     recomputeCounts();
     applyFilters();
+    if (els.list) els.list.scrollTop = scroll;
     if (window.Progress && typeof window.Progress.render === "function") {
       const progressView = document.getElementById("view-progress");
       if (progressView && !progressView.hidden) window.Progress.render();
     }
-    openDetail(id);
+    if (els.detail && !els.detail.hidden) {
+      openDetail(id);
+    }
   }
 
 

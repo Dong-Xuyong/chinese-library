@@ -87,6 +87,20 @@ def main() -> None:
                 continue
             merged[ch] = normalize_entry(ch, raw)
 
+    # Keep level-1 supplement entries that are not in the Obsidian batches.
+    try:
+        from merge_common3500 import load_source
+    except ImportError:
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from merge_common3500 import load_source
+
+    source_chars = load_source()["characters"]
+    for ch, raw in source_chars.items():
+        if ch in expected and ch not in merged and isinstance(raw, dict):
+            merged[ch] = normalize_entry(ch, raw)
+
     missing = sorted(expected - set(merged))
     extra = sorted(set(merged) - expected)
     print(f"Merged {len(merged)} / {len(expected)} characters from {len(files)} files")

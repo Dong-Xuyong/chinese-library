@@ -21,6 +21,8 @@ python build/parse_vocab.py
 
 This rebuilds `data/vocab.json`, copies matching Obsidian `.mp3` embeds into `audio/{id}.mp3` (from `Journal/attachments` by default), and refreshes `data/journey.json` from vault git history.
 
+Cards for 通用规范汉字表 level-1 characters that are not in the Obsidian notes live in `data/common-3500.json`. The rebuild appends them (status learning, deck `common-3500`) and does not overwrite an Obsidian entry with the same hanzi. See `data/SOURCES.md`.
+
 Or with explicit paths:
 
 ```bash
