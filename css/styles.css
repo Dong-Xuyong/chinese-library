@@ -200,9 +200,9 @@ body {
 }
 
 #sync-label {
-  flex: 0 1 auto;
-  max-width: 46%;
-  min-width: 4.5rem;
+  flex: 0 0 8.5rem;
+  width: 8.5rem;
+  height: 1.2em;
   margin-left: auto;
   text-align: right;
   font-size: 0.78rem;
@@ -212,6 +212,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  contain: strict;
 }
 
 #topbar .dong-home-link {

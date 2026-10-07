@@ -13,19 +13,34 @@
   var MINUTE_MS = 60 * 1000;
   var DAY_MS = 24 * 60 * 60 * 1000;
 
+  var cachedRaw;
+  var cachedState = {};
+
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return {};
+      if (raw === cachedRaw) return cachedState;
+      if (!raw) {
+        cachedRaw = raw;
+        cachedState = {};
+        return cachedState;
+      }
       var parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : {};
+      cachedState = parsed && typeof parsed === 'object' ? parsed : {};
+      cachedRaw = raw;
+      return cachedState;
     } catch (e) {
+      cachedRaw = undefined;
       return {};
     }
   }
 
   function save(state) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state || {}));
+    var next = state || {};
+    var raw = JSON.stringify(next);
+    localStorage.setItem(STORAGE_KEY, raw);
+    cachedRaw = raw;
+    cachedState = next;
   }
 
   function defaultState(now) {
@@ -125,9 +140,13 @@
   function dueCards(cardIds, now) {
     if (now == null) now = Date.now();
     var ids = cardIds || [];
-    return ids.filter(function (id) {
-      return isDue(id, now);
-    });
+    var state = load();
+    var due = [];
+    for (var i = 0; i < ids.length; i++) {
+      var card = state[ids[i]];
+      if (!card || typeof card.due !== 'number' || card.due <= now) due.push(ids[i]);
+    }
+    return due;
   }
 
   /**
@@ -137,10 +156,11 @@
   function stats(cardIds) {
     var now = Date.now();
     var ids = cardIds || [];
+    var state = load();
     var result = { due: 0, new: 0, learning: 0, review: 0 };
 
     for (var i = 0; i < ids.length; i++) {
-      var card = getCardState(ids[i]);
+      var card = state[ids[i]];
       if (!card) {
         result.new += 1;
         result.due += 1;
