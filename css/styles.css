@@ -675,9 +675,7 @@ html.dark .chip-keyword.is-active {
 
 /* Card list — raised Insights cards */
 .card-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
+  display: block;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -698,6 +696,7 @@ html.dark .chip-keyword.is-active {
   width: 100%;
   flex: 0 0 auto;
   align-self: start;
+  margin-bottom: 0.55rem;
   min-height: var(--tap);
   height: auto;
   padding: 0.85rem 0.75rem 0.9rem 1rem;
@@ -709,6 +708,8 @@ html.dark .chip-keyword.is-active {
   text-align: left;
   box-shadow: var(--shadow);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.14s linear;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 .list-row.is-status-changed {
@@ -2923,6 +2924,7 @@ html.dark .chip-keyword.is-active {
   }
 
   .list-row {
+    margin-bottom: 0;
     border-radius: 14px;
     border: 1px solid var(--ink-line);
     background: var(--ink-elevated);
