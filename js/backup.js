@@ -1,6 +1,6 @@
 /**
  * Cross-device progress sync. On load, remote and local stores are merged.
- * Later edits are saved to GitHub after a short pause.
+ * Later edits are saved to GitHub in one batch, a few seconds after the last change.
  */
 (function (global) {
   "use strict";
@@ -90,7 +90,7 @@
     };
   }
 
-  var DEBOUNCE_MS = 1000;
+  var DEBOUNCE_MS = 8000;
   var applying = false;
   var pushing = false;
   var queued = false;
@@ -178,15 +178,8 @@
 
   function refreshUi() {
     try {
-      if (
-        global.App &&
-        Array.isArray(global.App.cards) &&
-        global.StatusStore &&
-        typeof global.StatusStore.applyToCards === "function"
-      ) {
-        global.StatusStore.applyToCards(global.App.cards);
-        if (typeof global.App.recomputeCounts === "function") global.App.recomputeCounts();
-        if (typeof global.App.applyFilters === "function") global.App.applyFilters();
+      if (global.App && typeof global.App.applyRemoteProgress === "function") {
+        global.App.applyRemoteProgress();
       }
       var progressView = document.getElementById("view-progress");
       if (
@@ -250,9 +243,24 @@
       showConnect();
       if (queued) {
         queued = false;
-        schedulePush();
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        pushNow();
       }
     });
+  }
+
+  function flushPendingSync() {
+    if (global.App && typeof global.App.flushPersist === "function") {
+      global.App.flushPersist();
+    }
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (pushing) {
+      queued = true;
+      return;
+    }
+    pushNow();
   }
 
   function onConnect() {
@@ -287,18 +295,18 @@
     var btn = document.getElementById("btn-connect");
     if (btn) btn.addEventListener("click", onConnect);
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState === "hidden") {
+        flushPendingSync();
+        return;
+      }
       showConnect();
       if (!hasToken()) {
         setStatus("Not synced");
         return;
       }
-      if (saveTimer) {
-        clearTimeout(saveTimer);
-        saveTimer = null;
-      }
-      pushNow();
+      flushPendingSync();
     });
+    window.addEventListener("pagehide", flushPendingSync);
     if (!global.GhSync) {
       setStatus("GitHub sync failed to load.");
       return;
