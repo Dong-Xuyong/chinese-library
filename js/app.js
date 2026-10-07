@@ -94,31 +94,7 @@
   }
 
   function applyFilters() {
-    const q = normalize(App.filters.search.trim());
-    const { status, pos, keyword } = App.filters;
-
-    App.filtered = App.cards.filter((card) => {
-      if (status !== "all" && card.status !== status) return false;
-      if (pos && card.pos !== pos) return false;
-      if (keyword) {
-        const kws = Array.isArray(card.keywords) ? card.keywords : [];
-        if (!kws.includes(keyword)) return false;
-      }
-      if (!q) return true;
-
-      const hay = [
-        card.hanzi,
-        card.pinyin,
-        card.gloss,
-        card.pos,
-        ...(Array.isArray(card.keywords) ? card.keywords : []),
-      ]
-        .map(normalize)
-        .join(" ");
-
-      return hay.includes(q);
-    });
-
+    App.filtered = App.cards.filter(matchesFilters);
     renderList();
     renderStats();
   }
@@ -133,11 +109,107 @@
     els.stats.textContent = parts.join(" · ");
   }
 
-  let justToggledId = null;
+  const cardById = new Map();
+  const cardOrder = new Map();
+  const rowById = new Map();
+  let persistQueue = [];
+  let persistDelay = 0;
+  let persistIdle = 0;
+
+  function indexCards() {
+    cardById.clear();
+    cardOrder.clear();
+    App.cards.forEach((card, index) => {
+      cardById.set(card.id, card);
+      cardOrder.set(card.id, index);
+    });
+  }
+
+  function matchesFilters(card) {
+    const q = normalize(App.filters.search.trim());
+    const { status, pos, keyword } = App.filters;
+    if (status !== "all" && card.status !== status) return false;
+    if (pos && card.pos !== pos) return false;
+    if (keyword) {
+      const kws = Array.isArray(card.keywords) ? card.keywords : [];
+      if (!kws.includes(keyword)) return false;
+    }
+    if (!q) return true;
+    const hay = [
+      card.hanzi,
+      card.pinyin,
+      card.gloss,
+      card.pos,
+      ...(Array.isArray(card.keywords) ? card.keywords : []),
+    ]
+      .map(normalize)
+      .join(" ");
+    return hay.includes(q);
+  }
+
+  function statusLabel(card, next) {
+    return next === "known"
+      ? `Mark ${card.hanzi} as known`
+      : `Mark ${card.hanzi} as learning`;
+  }
+
+  function buildRow(card) {
+    const row = document.createElement("div");
+    row.className = "list-row";
+    row.setAttribute("role", "listitem");
+    row.dataset.id = card.id;
+    rowById.set(card.id, row);
+
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "list-open";
+    const openLabel = [card.hanzi, card.pinyin, card.gloss].filter(Boolean).join(", ");
+    open.setAttribute("aria-label", `Open ${openLabel}`);
+    open.addEventListener("click", () => openDetail(card.id));
+
+    const hanzi = document.createElement("span");
+    hanzi.className = "list-hanzi";
+    hanzi.setAttribute("aria-hidden", "true");
+    hanzi.innerHTML =
+      escapeHtml(card.hanzi) +
+      (card.audio
+        ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
+        : "");
+
+    const pinyin = document.createElement("span");
+    pinyin.className = "list-pinyin";
+    pinyin.setAttribute("aria-hidden", "true");
+    pinyin.textContent = card.pinyin || "";
+
+    const gloss = document.createElement("span");
+    gloss.className = "list-gloss";
+    gloss.setAttribute("aria-hidden", "true");
+    gloss.textContent = card.gloss || "";
+
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = `badge badge-${card.status} list-status`;
+    pill.textContent = card.status;
+    const next = card.status === "known" ? "learning" : "known";
+    pill.setAttribute("aria-label", statusLabel(card, next));
+    pill.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+    });
+    pill.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const upcoming = card.status === "known" ? "learning" : "known";
+      setCardStatus(card.id, upcoming);
+    });
+
+    row.append(open, hanzi, pinyin, gloss, pill);
+    return row;
+  }
 
   function renderList() {
     if (!els.list) return;
     if (!App.filtered.length) {
+      rowById.clear();
       els.list.innerHTML =
         `<p class="list-empty">` +
         `<span class="list-empty-title">此架暂空</span>` +
@@ -146,71 +218,62 @@
       return;
     }
 
-    const flashed = justToggledId;
-    justToggledId = null;
-
+    rowById.clear();
     const frag = document.createDocumentFragment();
-    for (const card of App.filtered) {
-      const row = document.createElement("div");
-      row.className = "list-row";
-      row.setAttribute("role", "listitem");
-      row.dataset.id = card.id;
-
-      const open = document.createElement("button");
-      open.type = "button";
-      open.className = "list-open";
-      const openLabel = [card.hanzi, card.pinyin, card.gloss].filter(Boolean).join(", ");
-      open.setAttribute("aria-label", `Open ${openLabel}`);
-      open.addEventListener("click", () => openDetail(card.id));
-
-      const hanzi = document.createElement("span");
-      hanzi.className = "list-hanzi";
-      hanzi.setAttribute("aria-hidden", "true");
-      hanzi.innerHTML =
-        escapeHtml(card.hanzi) +
-        (card.audio
-          ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
-          : "");
-
-      const pinyin = document.createElement("span");
-      pinyin.className = "list-pinyin";
-      pinyin.setAttribute("aria-hidden", "true");
-      pinyin.textContent = card.pinyin || "";
-
-      const gloss = document.createElement("span");
-      gloss.className = "list-gloss";
-      gloss.setAttribute("aria-hidden", "true");
-      gloss.textContent = card.gloss || "";
-
-      const next = card.status === "known" ? "learning" : "known";
-      const pill = document.createElement("button");
-      pill.type = "button";
-      pill.className = `badge badge-${card.status} list-status`;
-      pill.textContent = card.status;
-      pill.setAttribute(
-        "aria-label",
-        next === "known"
-          ? `Mark ${card.hanzi} as known`
-          : `Mark ${card.hanzi} as learning`
-      );
-      pill.addEventListener("pointerdown", (e) => {
-        e.stopPropagation();
-      });
-      pill.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setCardStatus(card.id, next);
-      });
-
-      if (card.id === flashed) {
-        row.classList.add("is-status-changed");
-        pill.classList.add("is-flash");
-      }
-
-      row.append(open, hanzi, pinyin, gloss, pill);
-      frag.appendChild(row);
-    }
+    for (const card of App.filtered) frag.appendChild(buildRow(card));
     els.list.replaceChildren(frag);
+  }
+
+  function paintRowStatus(row, card) {
+    const pill = row.querySelector(".list-status");
+    if (!pill) return;
+    const next = card.status === "known" ? "learning" : "known";
+    pill.className = `badge badge-${card.status} list-status`;
+    pill.textContent = card.status;
+    pill.setAttribute("aria-label", statusLabel(card, next));
+    row.classList.remove("is-status-changed");
+    requestAnimationFrame(() => {
+      if (!row.isConnected) return;
+      row.classList.add("is-status-changed");
+      pill.classList.add("is-flash");
+    });
+  }
+
+  function rowElement(id) {
+    const row = rowById.get(id);
+    return row && row.isConnected ? row : null;
+  }
+
+  function removeFiltered(card) {
+    const index = App.filtered.indexOf(card);
+    if (index >= 0) App.filtered.splice(index, 1);
+  }
+
+  function insertFiltered(card) {
+    const order = cardOrder.get(card.id);
+    const at = App.filtered.findIndex((other) => cardOrder.get(other.id) > order);
+    if (at < 0) App.filtered.push(card);
+    else App.filtered.splice(at, 0, card);
+  }
+
+  function placeRow(card) {
+    const row = buildRow(card);
+    row.classList.add("is-status-changed");
+    const pill = row.querySelector(".list-status");
+    if (pill) pill.classList.add("is-flash");
+    const order = cardOrder.get(card.id);
+    const rows = els.list.querySelectorAll(".list-row");
+    if (!rows.length) {
+      els.list.replaceChildren(row);
+      return;
+    }
+    for (const existing of rows) {
+      if (cardOrder.get(existing.dataset.id) > order) {
+        els.list.insertBefore(row, existing);
+        return;
+      }
+    }
+    els.list.appendChild(row);
   }
 
   function renderPosOptions() {
@@ -384,22 +447,105 @@
     enhanceStudyDashboard();
   }
 
+  function bumpCounts(from, to) {
+    if (!App.counts || from === to) return;
+    if (from === "known") App.counts.known -= 1;
+    else App.counts.learning -= 1;
+    if (to === "known") App.counts.known += 1;
+    else App.counts.learning += 1;
+  }
+
+  function syncStatusKeyword(card) {
+    const kws = (Array.isArray(card.keywords) ? card.keywords : []).filter(
+      (k) => k !== "learning" && k !== "known"
+    );
+    if (card.status) kws.push(card.status);
+    kws.sort();
+    card.keywords = kws;
+  }
+
+  function flushPersist() {
+    if (persistDelay) {
+      clearTimeout(persistDelay);
+      persistDelay = 0;
+    }
+    if (persistIdle && typeof cancelIdleCallback === "function") {
+      cancelIdleCallback(persistIdle);
+      persistIdle = 0;
+    }
+    const batch = persistQueue.splice(0);
+    if (!batch.length || !window.StatusStore) return;
+    for (const item of batch) {
+      const card = cardById.get(item.id);
+      if (card) window.StatusStore.setCardStatus(card, item.status);
+    }
+    enhanceStudyDashboard();
+    const progressView = document.getElementById("view-progress");
+    if (
+      progressView &&
+      !progressView.hidden &&
+      window.Progress &&
+      typeof window.Progress.render === "function"
+    ) {
+      window.Progress.render();
+    }
+  }
+
+  function schedulePersist(id, status) {
+    persistQueue.push({ id, status });
+    if (persistDelay) clearTimeout(persistDelay);
+    persistDelay = setTimeout(() => {
+      persistDelay = 0;
+      if (typeof requestIdleCallback === "function") {
+        persistIdle = requestIdleCallback(() => {
+          persistIdle = 0;
+          flushPersist();
+        }, { timeout: 400 });
+      } else {
+        flushPersist();
+      }
+    }, 50);
+  }
+
+  function installStatusFlush() {
+    const store = window.StatusStore;
+    if (!store || store.__fastFlush || typeof store.applyToCards !== "function") return;
+    const orig = store.applyToCards;
+    store.applyToCards = function (cards) {
+      flushPersist();
+      return orig.call(store, cards);
+    };
+    store.__fastFlush = true;
+  }
+
   function setCardStatus(id, status) {
-    const card = App.cards.find((c) => c.id === id);
+    const card = cardById.get(id) || App.cards.find((c) => c.id === id);
     if (!card || !window.StatusStore) return;
-    const scroll = els.list ? els.list.scrollTop : 0;
-    justToggledId = id;
-    window.StatusStore.setCardStatus(card, status);
-    recomputeCounts();
-    applyFilters();
-    if (els.list) els.list.scrollTop = scroll;
-    if (window.Progress && typeof window.Progress.render === "function") {
-      const progressView = document.getElementById("view-progress");
-      if (progressView && !progressView.hidden) window.Progress.render();
+    if (status !== "known" && status !== "learning") return;
+    const previous = card.status === "known" ? "known" : "learning";
+    if (previous === status) return;
+
+    card.status = status;
+    syncStatusKeyword(card);
+    bumpCounts(previous, status);
+
+    const row = rowElement(id);
+    const visible = matchesFilters(card);
+    if (row && visible) {
+      paintRowStatus(row, card);
+    } else if (row && !visible) {
+      row.remove();
+      rowById.delete(id);
+      removeFiltered(card);
+      if (!App.filtered.length) renderList();
+    } else if (!row && visible && els.list) {
+      if (!App.filtered.includes(card)) insertFiltered(card);
+      placeRow(card);
     }
-    if (els.detail && !els.detail.hidden) {
-      openDetail(id);
-    }
+    renderStats();
+    schedulePersist(id, status);
+
+    if (els.detail && !els.detail.hidden) openDetail(id);
   }
 
 
@@ -885,6 +1031,11 @@
   }
 
   function wireEvents() {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flushPersist();
+    });
+    window.addEventListener("pagehide", flushPersist);
+
     let searchTimer = null;
     els.search?.addEventListener("input", () => {
       clearTimeout(searchTimer);
@@ -982,6 +1133,8 @@
       if (!res.ok) throw new Error(`Failed to load vocab (${res.status})`);
       const data = await res.json();
       App.cards = Array.isArray(data.cards) ? data.cards : [];
+      indexCards();
+      installStatusFlush();
       if (window.StatusStore) {
         window.StatusStore.applyToCards(App.cards);
       }
