@@ -30,6 +30,7 @@
   window.App = App;
 
   const THEME_KEYWORDS = [
+    "common-3500",
     "food",
     "emotion",
     "work",
@@ -132,6 +133,8 @@
     els.stats.textContent = parts.join(" · ");
   }
 
+  let justToggledId = null;
+
   function renderList() {
     if (!els.list) return;
     if (!App.filtered.length) {
@@ -143,25 +146,69 @@
       return;
     }
 
+    const flashed = justToggledId;
+    justToggledId = null;
+
     const frag = document.createDocumentFragment();
     for (const card of App.filtered) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "list-row";
-      btn.setAttribute("role", "listitem");
-      btn.dataset.id = card.id;
-      btn.innerHTML = `
-        <span class="list-hanzi">${escapeHtml(card.hanzi)}${
-          card.audio
-            ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
-            : ""
-        }</span>
-        <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
-        <span class="list-pinyin">${escapeHtml(card.pinyin)}</span>
-        <span class="list-gloss">${escapeHtml(card.gloss)}</span>
-      `;
-      btn.addEventListener("click", () => openDetail(card.id));
-      frag.appendChild(btn);
+      const row = document.createElement("div");
+      row.className = "list-row";
+      row.setAttribute("role", "listitem");
+      row.dataset.id = card.id;
+
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "list-open";
+      const openLabel = [card.hanzi, card.pinyin, card.gloss].filter(Boolean).join(", ");
+      open.setAttribute("aria-label", `Open ${openLabel}`);
+      open.addEventListener("click", () => openDetail(card.id));
+
+      const hanzi = document.createElement("span");
+      hanzi.className = "list-hanzi";
+      hanzi.setAttribute("aria-hidden", "true");
+      hanzi.innerHTML =
+        escapeHtml(card.hanzi) +
+        (card.audio
+          ? '<span class="list-audio-dot" title="Has audio" aria-hidden="true"></span>'
+          : "");
+
+      const pinyin = document.createElement("span");
+      pinyin.className = "list-pinyin";
+      pinyin.setAttribute("aria-hidden", "true");
+      pinyin.textContent = card.pinyin || "";
+
+      const gloss = document.createElement("span");
+      gloss.className = "list-gloss";
+      gloss.setAttribute("aria-hidden", "true");
+      gloss.textContent = card.gloss || "";
+
+      const next = card.status === "known" ? "learning" : "known";
+      const pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = `badge badge-${card.status} list-status`;
+      pill.textContent = card.status;
+      pill.setAttribute(
+        "aria-label",
+        next === "known"
+          ? `Mark ${card.hanzi} as known`
+          : `Mark ${card.hanzi} as learning`
+      );
+      pill.addEventListener("pointerdown", (e) => {
+        e.stopPropagation();
+      });
+      pill.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setCardStatus(card.id, next);
+      });
+
+      if (card.id === flashed) {
+        row.classList.add("is-status-changed");
+        pill.classList.add("is-flash");
+      }
+
+      row.append(open, hanzi, pinyin, gloss, pill);
+      frag.appendChild(row);
     }
     els.list.replaceChildren(frag);
   }
@@ -340,14 +387,19 @@
   function setCardStatus(id, status) {
     const card = App.cards.find((c) => c.id === id);
     if (!card || !window.StatusStore) return;
+    const scroll = els.list ? els.list.scrollTop : 0;
+    justToggledId = id;
     window.StatusStore.setCardStatus(card, status);
     recomputeCounts();
     applyFilters();
+    if (els.list) els.list.scrollTop = scroll;
     if (window.Progress && typeof window.Progress.render === "function") {
       const progressView = document.getElementById("view-progress");
       if (progressView && !progressView.hidden) window.Progress.render();
     }
-    openDetail(id);
+    if (els.detail && !els.detail.hidden) {
+      openDetail(id);
+    }
   }
 
 

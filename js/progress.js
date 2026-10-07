@@ -7,6 +7,7 @@
 
   var JOURNEY_URL = "./data/journey.json";
   var THEME_KEYWORDS = [
+    "common-3500",
     "food",
     "emotion",
     "work",

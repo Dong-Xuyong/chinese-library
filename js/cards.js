@@ -102,6 +102,7 @@
   }
 
   var THEME_KEYWORDS = [
+    'common-3500',
     'food', 'emotion', 'work', 'relationship', 'internet', 'travel',
     'body', 'time', 'daily-life', 'idiom',
   ];
@@ -471,6 +472,25 @@
     if (global.VocabAudio) global.VocabAudio.play(card);
   }
 
+  function advanceQueue() {
+    session.index += 1;
+    session.flipped = false;
+    if (session.index >= session.queue.length) {
+      if (els.progressFill) els.progressFill.style.width = '100%';
+      if (els.progress) {
+        els.progress.textContent =
+          session.totalDueAtStart + ' / ' + session.totalDueAtStart + ' · done';
+      }
+      endSession();
+      setVisible(els.session, false);
+      setVisible(els.idle, true);
+      setVisible(els.empty, true);
+      if (els.empty) els.empty.textContent = 'Session complete. The page turns — start again anytime.';
+      return;
+    }
+    renderCard();
+  }
+
   function wireMarkKnown(root, card) {
     if (!root || !card) return;
     var btn = root.querySelector('[data-mark-known]');
@@ -483,8 +503,7 @@
       } else if (global.StatusStore) {
         global.StatusStore.setCardStatus(card, 'known');
       }
-      btn.textContent = 'Marked known';
-      btn.disabled = true;
+      advanceQueue();
     });
   }
 
@@ -556,24 +575,7 @@
     if (global.JourneyStore && typeof global.JourneyStore.logStudy === "function") {
       global.JourneyStore.logStudy(1);
     }
-    session.index += 1;
-    session.flipped = false;
-
-    if (session.index >= session.queue.length) {
-      if (els.progressFill) els.progressFill.style.width = '100%';
-      if (els.progress) {
-        els.progress.textContent =
-          session.totalDueAtStart + ' / ' + session.totalDueAtStart + ' · done';
-      }
-      endSession();
-      setVisible(els.session, false);
-      setVisible(els.idle, true);
-      setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Session complete. The page turns — start again anytime.';
-      return;
-    }
-
-    renderCard();
+    advanceQueue();
   }
 
   function endSession() {
