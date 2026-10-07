@@ -1,5 +1,6 @@
 /**
- * Cross-device progress backup: export the three local stores, import merges them.
+ * Cross-device progress sync. On load, remote and local stores are merged.
+ * Later edits are saved to GitHub after a short pause.
  */
 (function (global) {
   "use strict";
@@ -89,79 +90,224 @@
     };
   }
 
+  var DEBOUNCE_MS = 1000;
+  var applying = false;
+  var pushing = false;
+  var queued = false;
+  var saveTimer = null;
+
   function payload() {
     return Object.assign({ app: APP, version: 1, exportedAt: new Date().toISOString() }, readAll());
   }
 
   function applyData(data) {
     if (!data || data.app !== APP) throw new Error("This file is not a Chinese Library backup");
-    var local = readAll();
-    if (localStorage.getItem(APP + "-pre-import") == null) {
-      localStorage.setItem(APP + "-pre-import", JSON.stringify(local));
+    applying = true;
+    try {
+      var local = readAll();
+      if (localStorage.getItem(APP + "-pre-import") == null) {
+        localStorage.setItem(APP + "-pre-import", JSON.stringify(local));
+      }
+      var merged = merge(local, data);
+      Object.keys(KEYS).forEach(function (k) {
+        localStorage.setItem(KEYS[k], JSON.stringify(merged[k]));
+      });
+    } finally {
+      applying = false;
     }
-    var merged = merge(local, data);
-    Object.keys(KEYS).forEach(function (k) {
-      localStorage.setItem(KEYS[k], JSON.stringify(merged[k]));
+  }
+
+  function stable(value) {
+    if (Array.isArray(value)) return "[" + value.map(stable).join(",") + "]";
+    if (value && typeof value === "object") {
+      return "{" + Object.keys(value).sort().map(function (k) {
+        return JSON.stringify(k) + ":" + stable(value[k]);
+      }).join(",") + "}";
+    }
+    return JSON.stringify(value == null ? null : value);
+  }
+
+  function fingerprint(data) {
+    data = data || {};
+    return stable({
+      status: data.status || {},
+      srs: data.srs || {},
+      journey: data.journey || {},
     });
   }
 
-  function exportFile() {
-    var blob = new Blob([JSON.stringify(payload())], { type: "application/json" });
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = APP + "-progress-" + new Date().toISOString().slice(0, 10) + ".json";
-    a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  function hasProgress(data) {
+    var status = (data && data.status) || {};
+    var srs = (data && data.srs) || {};
+    var journey = (data && data.journey) || {};
+    var first = journey.firstKnown || {};
+    return Object.keys(status).length > 0 ||
+      Object.keys(srs).length > 0 ||
+      (journey.snapshots && journey.snapshots.length > 0) ||
+      (journey.events && journey.events.length > 0) ||
+      Object.keys(first).length > 0;
   }
 
-  function importText(text) {
-    var data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      alert("Not a valid JSON file");
-      return;
-    }
-    try {
-      applyData(data);
-    } catch (e) {
-      alert(e.message);
-      return;
-    }
-    alert("Merged " + Object.keys(data.srs || {}).length + " study cards from backup");
-    location.reload();
+  function pad2(n) {
+    return (n < 10 ? "0" : "") + n;
   }
 
-  function githubSync(mode) {
-    if (!global.GhSync) return alert("GitHub sync unavailable");
-    var run = mode === "save" ? global.GhSync.save(APP, payload, applyData) : global.GhSync.load(APP, applyData);
-    run.then(
-      function (msg) {
-        alert(msg);
-        location.reload();
-      },
-      function (e) {
-        alert(e.message);
+  function hhmm() {
+    var now = new Date();
+    return pad2(now.getHours()) + ":" + pad2(now.getMinutes());
+  }
+
+  function hasToken() {
+    try {
+      var cfg = JSON.parse(localStorage.getItem("dong-gh-sync") || "null");
+      return !!(cfg && cfg.token);
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setStatus(text) {
+    var el = document.getElementById("sync-label");
+    if (el) el.textContent = text;
+  }
+
+  function showConnect() {
+    var el = document.getElementById("connect");
+    if (el) el.hidden = hasToken();
+  }
+
+  function refreshUi() {
+    try {
+      if (
+        global.App &&
+        Array.isArray(global.App.cards) &&
+        global.StatusStore &&
+        typeof global.StatusStore.applyToCards === "function"
+      ) {
+        global.StatusStore.applyToCards(global.App.cards);
+        if (typeof global.App.recomputeCounts === "function") global.App.recomputeCounts();
+        if (typeof global.App.applyFilters === "function") global.App.applyFilters();
       }
-    );
+      var progressView = document.getElementById("view-progress");
+      if (
+        progressView &&
+        !progressView.hidden &&
+        global.Progress &&
+        typeof global.Progress.render === "function"
+      ) {
+        global.Progress.render();
+      }
+    } catch (e) {}
+  }
+
+  function schedulePush() {
+    if (!hasToken() || !global.GhSync) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      saveTimer = null;
+      pushNow();
+    }, DEBOUNCE_MS);
+  }
+
+  function syncWithRetry(isRetry) {
+    return global.GhSync.fetch(APP).then(function (remote) {
+      if (remote) applyData(remote.data);
+      var next = payload();
+      if (remote && fingerprint(remote.data) === fingerprint(next)) return;
+      if (!remote && !hasProgress(next)) return;
+      return global.GhSync.write(APP, next, remote && remote.sha).catch(function (err) {
+        if (!isRetry && err && err.status === 409) return syncWithRetry(true);
+        throw err;
+      });
+    });
+  }
+
+  function pushNow() {
+    if (!global.GhSync) {
+      setStatus("GitHub sync failed to load.");
+      showConnect();
+      return Promise.resolve();
+    }
+    if (!hasToken()) {
+      setStatus("Not synced");
+      showConnect();
+      return Promise.resolve();
+    }
+    if (pushing) {
+      queued = true;
+      return Promise.resolve();
+    }
+    pushing = true;
+    setStatus("Syncing\u2026");
+    var before = fingerprint(readAll());
+    return syncWithRetry(false).then(function () {
+      setStatus("Synced " + hhmm());
+      if (fingerprint(readAll()) !== before) refreshUi();
+    }, function (err) {
+      setStatus(err && err.message ? err.message : "Sync failed");
+    }).then(function () {
+      pushing = false;
+      showConnect();
+      if (queued) {
+        queued = false;
+        schedulePush();
+      }
+    });
+  }
+
+  function onConnect() {
+    if (!global.GhSync) {
+      setStatus("GitHub sync failed to load.");
+      return;
+    }
+    try {
+      if (!hasToken()) global.GhSync.ensureConfig();
+    } catch (e) {
+      setStatus("Not synced");
+      showConnect();
+      return;
+    }
+    showConnect();
+    pushNow();
+  }
+
+  function watchStores() {
+    var nativeSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      nativeSetItem.call(this, key, value);
+      if (applying || this !== localStorage) return;
+      if (key !== KEYS.status && key !== KEYS.srs && key !== KEYS.journey) return;
+      schedulePush();
+    };
   }
 
   function wire() {
-    var file = document.getElementById("import-progress-file");
-    var exp = document.getElementById("export-progress");
-    var imp = document.getElementById("import-progress");
-    if (!file || !exp || !imp) return;
-    exp.addEventListener("click", exportFile);
-    imp.addEventListener("click", function () { file.click(); });
-    var ghSave = document.getElementById("github-save");
-    var ghLoad = document.getElementById("github-load");
-    if (ghSave) ghSave.addEventListener("click", function () { githubSync("save"); });
-    if (ghLoad) ghLoad.addEventListener("click", function () { githubSync("load"); });
-    file.addEventListener("change", function () {
-      var f = file.files && file.files[0];
-      if (f) f.text().then(importText);
-      file.value = "";
+    watchStores();
+    showConnect();
+    var btn = document.getElementById("btn-connect");
+    if (btn) btn.addEventListener("click", onConnect);
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState !== "visible") return;
+      showConnect();
+      if (!hasToken()) {
+        setStatus("Not synced");
+        return;
+      }
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      pushNow();
     });
+    if (!global.GhSync) {
+      setStatus("GitHub sync failed to load.");
+      return;
+    }
+    if (!hasToken()) {
+      setStatus("Not synced");
+      return;
+    }
+    pushNow();
   }
 
   global.ChineseBackup = { merge: merge, mergeSrs: mergeSrs, mergeJourney: mergeJourney };

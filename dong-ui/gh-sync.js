@@ -4,6 +4,9 @@
  *
  *   GhSync.save(appId, getPayload, applyPayload) -> Promise<message>
  *   GhSync.load(appId, applyPayload)             -> Promise<message>
+ *   GhSync.fetch(appId)                          -> Promise<{sha, data}|null>
+ *   GhSync.write(appId, data, sha)               -> Promise<{sha}>
+ *   GhSync.hasToken() / GhSync.ensureConfig()
  */
 (function (global) {
   "use strict";
@@ -12,12 +15,21 @@
   var DEFAULT_REPO = "Dong-Xuyong/progress-sync";
   var API = "https://api.github.com/repos/";
 
-  function getConfig() {
-    var cfg = null;
+  function readConfig() {
     try {
-      cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "null");
+      var cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || "null");
+      if (cfg && cfg.token) return cfg;
     } catch (e) {}
-    if (cfg && cfg.token) return cfg;
+    return null;
+  }
+
+  function hasToken() {
+    return !!readConfig();
+  }
+
+  function getConfig() {
+    var cfg = readConfig();
+    if (cfg) return cfg;
     var token = global.prompt(
       "Paste a GitHub fine-grained token with Contents read/write on " +
         DEFAULT_REPO +
@@ -27,6 +39,16 @@
     cfg = { token: token.trim(), repo: DEFAULT_REPO };
     localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
     return cfg;
+  }
+
+  function ensureConfig() {
+    return getConfig();
+  }
+
+  function errorWithStatus(status, message) {
+    var err = new Error(message);
+    err.status = status;
+    return err;
   }
 
   function toBase64(str) {
@@ -49,11 +71,11 @@
     }).then(function (res) {
       if (res.status === 401) {
         localStorage.removeItem(CONFIG_KEY);
-        throw new Error("GitHub token rejected; you will be asked for a new one");
+        throw errorWithStatus(401, "GitHub token rejected; you will be asked for a new one");
       }
       if (res.status === 404 && method === "GET") return null;
-      if (res.status === 409) throw new Error("Saved from another device meanwhile; try again");
-      if (!res.ok) throw new Error("GitHub error " + res.status);
+      if (res.status === 409) throw errorWithStatus(409, "Saved from another device meanwhile; try again");
+      if (!res.ok) throw errorWithStatus(res.status, "GitHub error " + res.status);
       return res.json();
     });
   }
@@ -105,5 +127,31 @@
     });
   }
 
-  global.GhSync = { save: save, load: load };
+  function fetchFile(appId) {
+    var cfg = readConfig();
+    if (!cfg) return Promise.reject(new Error("No GitHub token, sync cancelled"));
+    return fetchRemote(cfg, appId);
+  }
+
+  function writeFile(appId, data, sha) {
+    var cfg = readConfig();
+    if (!cfg) return Promise.reject(new Error("No GitHub token, sync cancelled"));
+    var body = {
+      message: "Save " + appId + " progress",
+      content: toBase64(JSON.stringify(data)),
+    };
+    if (sha) body.sha = sha;
+    return request(cfg, "PUT", appId + ".json", body).then(function (file) {
+      return { sha: file && file.sha };
+    });
+  }
+
+  global.GhSync = {
+    save: save,
+    load: load,
+    fetch: fetchFile,
+    write: writeFile,
+    hasToken: hasToken,
+    ensureConfig: ensureConfig,
+  };
 })(typeof window !== "undefined" ? window : globalThis);
