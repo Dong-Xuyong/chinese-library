@@ -115,6 +115,7 @@
   let persistQueue = [];
   let persistDelay = 0;
   let persistIdle = 0;
+  let studyRefreshTimer = 0;
 
   function indexCards() {
     cardById.clear();
@@ -254,6 +255,22 @@
     const at = App.filtered.findIndex((other) => cardOrder.get(other.id) > order);
     if (at < 0) App.filtered.push(card);
     else App.filtered.splice(at, 0, card);
+  }
+
+  function syncRow(card) {
+    const row = rowElement(card.id);
+    const visible = matchesFilters(card);
+    if (row && visible) {
+      paintRowStatus(row, card);
+    } else if (row && !visible) {
+      row.remove();
+      rowById.delete(card.id);
+      removeFiltered(card);
+      if (!App.filtered.length) renderList();
+    } else if (!row && visible && els.list) {
+      if (!App.filtered.includes(card)) insertFiltered(card);
+      placeRow(card);
+    }
   }
 
   function placeRow(card) {
@@ -464,6 +481,23 @@
     card.keywords = kws;
   }
 
+  function scheduleStudyRefresh() {
+    if (studyRefreshTimer) clearTimeout(studyRefreshTimer);
+    studyRefreshTimer = setTimeout(() => {
+      studyRefreshTimer = 0;
+      enhanceStudyDashboard();
+      const progressView = document.getElementById("view-progress");
+      if (
+        progressView &&
+        !progressView.hidden &&
+        window.Progress &&
+        typeof window.Progress.render === "function"
+      ) {
+        window.Progress.render();
+      }
+    }, 1000);
+  }
+
   function flushPersist() {
     if (persistDelay) {
       clearTimeout(persistDelay);
@@ -479,16 +513,30 @@
       const card = cardById.get(item.id);
       if (card) window.StatusStore.setCardStatus(card, item.status);
     }
-    enhanceStudyDashboard();
-    const progressView = document.getElementById("view-progress");
-    if (
-      progressView &&
-      !progressView.hidden &&
-      window.Progress &&
-      typeof window.Progress.render === "function"
-    ) {
-      window.Progress.render();
+    scheduleStudyRefresh();
+  }
+
+  function applyRemoteProgress() {
+    if (!window.StatusStore || !Array.isArray(App.cards)) return 0;
+    const previous = new Map();
+    for (const card of App.cards) previous.set(card.id, card.status);
+    window.StatusStore.applyToCards(App.cards);
+    const changed = [];
+    for (const card of App.cards) {
+      if (previous.get(card.id) !== card.status) changed.push(card);
     }
+    if (!changed.length) {
+      enhanceStudyDashboard();
+      return 0;
+    }
+    for (const card of changed) syncRow(card);
+    recomputeCounts();
+    renderStats();
+    if (els.detail && !els.detail.hidden && location.hash.startsWith("#word/")) {
+      const openId = decodeURIComponent(location.hash.slice("#word/".length));
+      if (changed.some((card) => card.id === openId)) openDetail(openId);
+    }
+    return changed.length;
   }
 
   function schedulePersist(id, status) {
@@ -528,20 +576,7 @@
     card.status = status;
     syncStatusKeyword(card);
     bumpCounts(previous, status);
-
-    const row = rowElement(id);
-    const visible = matchesFilters(card);
-    if (row && visible) {
-      paintRowStatus(row, card);
-    } else if (row && !visible) {
-      row.remove();
-      rowById.delete(id);
-      removeFiltered(card);
-      if (!App.filtered.length) renderList();
-    } else if (!row && visible && els.list) {
-      if (!App.filtered.includes(card)) insertFiltered(card);
-      placeRow(card);
-    }
+    syncRow(card);
     renderStats();
     schedulePersist(id, status);
 
@@ -1173,6 +1208,8 @@
   App.filterByTopic = filterByTopic;
   App.filterByPos = filterByPos;
   App.setCardStatus = setCardStatus;
+  App.flushPersist = flushPersist;
+  App.applyRemoteProgress = applyRemoteProgress;
   App.recomputeCounts = recomputeCounts;
   App.openDetail = openDetail;
   App.showTab = showTab;
