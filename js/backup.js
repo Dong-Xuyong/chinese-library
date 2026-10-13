@@ -254,18 +254,20 @@
     return syncWithRetry(false).then(function () {
       setStatus("Synced " + hhmm());
       if (fingerprint(readAll()) !== before) refreshUi();
+      return true;
     }, function (err) {
       var described = describeSyncError(err);
       setStatus(described.label, described.title);
-    }).then(function () {
+      return false;
+    }).then(function (ok) {
       pushing = false;
       showConnect();
-      if (queued) {
-        queued = false;
-        clearTimeout(saveTimer);
-        saveTimer = null;
-        pushNow();
-      }
+      if (!queued) return;
+      queued = false;
+      if (!ok) return;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      pushNow();
     });
   }
 
