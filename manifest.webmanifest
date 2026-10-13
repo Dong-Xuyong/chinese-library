@@ -1,6 +1,6 @@
 {
-  "name": "More Life Chinese",
-  "short_name": "More Life Chinese",
+  "name": "Mandarin Vocabulary",
+  "short_name": "Mandarin Vocabulary",
   "description": "Chinese vocabulary library and Anki-style spaced review",
   "start_url": "./",
   "scope": "./",
