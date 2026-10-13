@@ -1179,12 +1179,19 @@
       App.posList = Array.isArray(data.posList)
         ? data.posList
         : [...new Set(App.cards.map((c) => c.pos).filter(Boolean))].sort();
-      recomputeCounts();
+      if (window.StatusStore) {
+        App.counts = window.StatusStore.counts(App.cards);
+      } else {
+        App.counts = {
+          total: App.cards.length,
+          learning: App.cards.filter((c) => c.status === "learning").length,
+          known: App.cards.filter((c) => c.status === "known").length,
+        };
+      }
 
       renderPosOptions();
       renderKeywordChips();
       applyFilters();
-      initStudyModules();
       ensureCharacters();
       parseHash();
     } catch (err) {
@@ -1200,6 +1207,26 @@
     } finally {
       setLoading(false);
     }
+    afterLibraryPaint();
+  }
+
+  function afterLibraryPaint() {
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      try {
+        enhanceStudyDashboard();
+      } catch (err) {
+        console.warn(err);
+      }
+      initStudyModules();
+      document.dispatchEvent(new CustomEvent("ml-library-ready"));
+    };
+    if (typeof requestAnimationFrame === "function" && document.visibilityState !== "hidden") {
+      requestAnimationFrame(() => requestAnimationFrame(start));
+    }
+    setTimeout(start, document.visibilityState === "hidden" ? 0 : 1000);
   }
 
   // Public helpers for other modules
