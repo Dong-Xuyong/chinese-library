@@ -45,9 +45,24 @@
     return getConfig();
   }
 
+  var GET_TIMEOUT_MS = 12000;
+  var PUT_TIMEOUT_MS = 15000;
+
   function errorWithStatus(status, message) {
     var err = new Error(message);
     err.status = status;
+    return err;
+  }
+
+  function normalizeNet(err) {
+    if (!err) return new Error("Sync failed");
+    if (err.status) return err;
+    if (err.name === "AbortError") return errorWithStatus(0, "Sync timed out");
+    if (err.name === "SyntaxError") return errorWithStatus(0, "Sync data could not be read");
+    var msg = err.message || "";
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+      return errorWithStatus(0, "Could not reach GitHub");
+    }
     return err;
   }
 
@@ -60,9 +75,14 @@
   }
 
   function request(cfg, method, path, body) {
+    var timeoutMs = method === "GET" ? GET_TIMEOUT_MS : method === "PUT" ? PUT_TIMEOUT_MS : 0;
+    var ctrl = timeoutMs && typeof AbortController === "function" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, timeoutMs) : 0;
+
     return fetch(API + cfg.repo + "/contents/" + path, {
       method: method,
       cache: "no-store",
+      signal: ctrl ? ctrl.signal : undefined,
       headers: {
         Authorization: "Bearer " + cfg.token,
         Accept: "application/vnd.github+json",
@@ -73,17 +93,34 @@
         localStorage.removeItem(CONFIG_KEY);
         throw errorWithStatus(401, "GitHub token rejected; you will be asked for a new one");
       }
+      if (res.status === 403) throw errorWithStatus(403, "GitHub access denied");
       if (res.status === 404 && method === "GET") return null;
       if (res.status === 409) throw errorWithStatus(409, "Saved from another device meanwhile; try again");
       if (!res.ok) throw errorWithStatus(res.status, "GitHub error " + res.status);
       return res.json();
+    }).then(function (value) {
+      if (timer) clearTimeout(timer);
+      return value;
+    }, function (err) {
+      if (timer) clearTimeout(timer);
+      throw normalizeNet(err);
     });
   }
 
   function fetchRemote(cfg, appId) {
     return request(cfg, "GET", appId + ".json").then(function (file) {
       if (!file) return null;
-      return { sha: file.sha, data: JSON.parse(fromBase64(file.content)) };
+      if (typeof file.content !== "string" || !file.content) {
+        throw errorWithStatus(0, "Sync data could not be read");
+      }
+      try {
+        var data = JSON.parse(fromBase64(file.content));
+        if (!data || typeof data !== "object") throw new Error("bad sync json");
+        return { sha: file.sha, data: data };
+      } catch (e) {
+        if (e && e.status) throw e;
+        throw errorWithStatus(0, "Sync data could not be read");
+      }
     });
   }
 

@@ -1,6 +1,7 @@
 /**
  * Cross-device progress sync. On load, remote and local stores are merged.
- * Later edits are saved to GitHub after a short pause.
+ * Later edits are saved to GitHub in one batch, a few seconds after the last change.
+ * The library paints from bundled data and this device's cache before that request starts.
  */
 (function (global) {
   "use strict";
@@ -90,7 +91,7 @@
     };
   }
 
-  var DEBOUNCE_MS = 1000;
+  var DEBOUNCE_MS = 8000;
   var applying = false;
   var pushing = false;
   var queued = false;
@@ -166,9 +167,26 @@
     }
   }
 
-  function setStatus(text) {
+  function setStatus(text, title) {
     var el = document.getElementById("sync-label");
-    if (el) el.textContent = text;
+    if (!el) return;
+    el.textContent = text;
+    if (title && title !== text) el.title = title;
+    else el.removeAttribute("title");
+  }
+
+  function describeSyncError(err) {
+    var status = err && err.status;
+    var raw = err && err.message ? err.message : "Sync failed";
+    if (status === 401 || /token rejected/i.test(raw)) return { label: "Token rejected", title: raw };
+    if (status === 403 || /access denied/i.test(raw)) return { label: "Access denied", title: raw };
+    if (status === 409 || /another device/i.test(raw)) return { label: "Sync conflict", title: raw };
+    if ((err && err.name === "AbortError") || /timed out/i.test(raw)) return { label: "Sync timed out", title: raw };
+    if ((err && err.name === "SyntaxError") || /could not be read|not a Chinese Library backup/i.test(raw)) {
+      return { label: "Sync unreadable", title: raw };
+    }
+    if (status) return { label: "GitHub " + status, title: raw };
+    return { label: "Sync failed", title: raw };
   }
 
   function showConnect() {
@@ -178,15 +196,8 @@
 
   function refreshUi() {
     try {
-      if (
-        global.App &&
-        Array.isArray(global.App.cards) &&
-        global.StatusStore &&
-        typeof global.StatusStore.applyToCards === "function"
-      ) {
-        global.StatusStore.applyToCards(global.App.cards);
-        if (typeof global.App.recomputeCounts === "function") global.App.recomputeCounts();
-        if (typeof global.App.applyFilters === "function") global.App.applyFilters();
+      if (global.App && typeof global.App.applyRemoteProgress === "function") {
+        global.App.applyRemoteProgress();
       }
       var progressView = document.getElementById("view-progress");
       if (
@@ -243,16 +254,34 @@
     return syncWithRetry(false).then(function () {
       setStatus("Synced " + hhmm());
       if (fingerprint(readAll()) !== before) refreshUi();
+      return true;
     }, function (err) {
-      setStatus(err && err.message ? err.message : "Sync failed");
-    }).then(function () {
+      var described = describeSyncError(err);
+      setStatus(described.label, described.title);
+      return false;
+    }).then(function (ok) {
       pushing = false;
       showConnect();
-      if (queued) {
-        queued = false;
-        schedulePush();
-      }
+      if (!queued) return;
+      queued = false;
+      if (!ok) return;
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      pushNow();
     });
+  }
+
+  function flushPendingSync() {
+    if (global.App && typeof global.App.flushPersist === "function") {
+      global.App.flushPersist();
+    }
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    if (pushing) {
+      queued = true;
+      return;
+    }
+    pushNow();
   }
 
   function onConnect() {
@@ -281,24 +310,42 @@
     };
   }
 
+  var syncArmed = false;
+
+  function armSync() {
+    if (syncArmed) return;
+    syncArmed = true;
+    if (!global.GhSync) {
+      setStatus("GitHub sync failed to load.");
+      showConnect();
+      return;
+    }
+    if (!hasToken()) {
+      setStatus("Not synced");
+      showConnect();
+      return;
+    }
+    pushNow();
+  }
+
   function wire() {
     watchStores();
     showConnect();
     var btn = document.getElementById("btn-connect");
     if (btn) btn.addEventListener("click", onConnect);
     document.addEventListener("visibilitychange", function () {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState === "hidden") {
+        flushPendingSync();
+        return;
+      }
       showConnect();
       if (!hasToken()) {
         setStatus("Not synced");
         return;
       }
-      if (saveTimer) {
-        clearTimeout(saveTimer);
-        saveTimer = null;
-      }
-      pushNow();
+      flushPendingSync();
     });
+    window.addEventListener("pagehide", flushPendingSync);
     if (!global.GhSync) {
       setStatus("GitHub sync failed to load.");
       return;
@@ -307,7 +354,14 @@
       setStatus("Not synced");
       return;
     }
-    pushNow();
+    // Words come from the bundled library plus local cache. Sync starts only
+    // after that first paint, so a slow or hung GitHub request cannot hold the shelves.
+    if (global.App && Array.isArray(global.App.cards) && global.App.cards.length) {
+      armSync();
+    } else {
+      document.addEventListener("ml-library-ready", armSync);
+      setTimeout(armSync, 20000);
+    }
   }
 
   global.ChineseBackup = { merge: merge, mergeSrs: mergeSrs, mergeJourney: mergeJourney };
