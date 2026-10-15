@@ -6,8 +6,8 @@ Mobile-first Chinese vocabulary library and in-browser Anki-style study deck, bu
 
 ## What it is
 
+- **Practice** — the landing page. A daily goal of 20 reviews, spaced-repetition ratings, and a streak, XP, and combo on this page only
 - **Library** — searchable list of learning + known words (hanzi, pinyin, gloss, POS, keywords)
-- **Study** — spaced-repetition flashcards (Again / Hard / Good / Easy) with progress in `localStorage`
 - **Progress** — learning journey curve + timeline, mastery, SRS due status, topic/POS mix, and audio coverage
 - Data comes from `data/vocab.json` (and `data/journey.json` for historical curve), generated from your vault notes
 
@@ -53,22 +53,33 @@ Cards with a recorded file play that audio; cards without one use the browser's 
 4. Tap a word for the detail sheet (example, notes, keywords). Tap a keyword chip to filter the list.
 5. Tap **Mark as known** (or **Mark as learning**) to move a word between decks — saved on this device.
 
-### Study
+### Practice
 
-1. Switch to the **Study** tab.
-2. Optionally narrow by status and keyword.
-3. Tap **Start study** for due cards.
-4. Tap the card (or **Reveal**), then rate **Again / Hard / Good / Easy**.
+1. Open the site. Practice is the first screen (`#practice`; `#study` still opens it).
+2. The ring shows today's reviews as `7/20`. **Start** deals the cards still in today's goal.
+3. Today is done at 20 reviews, or when nothing is due. Tap the card (or **Reveal**), then rate **Again / Hard / Good / Easy**.
+4. A correct run shows a combo. Finishing the 20 plays a short celebration. The streak counts Lisbon days the goal was hit.
 
 ### Progress
 
 1. Open the **Progress** tab for the **Learning journey** curve and timeline, plus mastery, SRS, topics, POS, and audio charts.
-2. Vault history powers the past curve; from today, mark-known and study activity stay in this browser (`localStorage`).
+2. Vault history powers the past curve; from today, mark-known and practice activity stay in this browser and sync with GitHub.
 3. Tap a recently mastered chip or timeline word to open it in Library.
 4. Tap a topic or POS bar to jump into a filtered Library view.
-5. Tap **Study due cards** to go straight to Study.
+5. Tap **Practice due cards** to go straight to Practice.
 
-Hash routes: `#library`, `#study`, `#progress`, `#word/<id>`.
+Hash routes: `#practice` (`#study` too), `#library`, `#progress`, `#word/<id>`.
+
+## Synced daily count
+
+`chinese-library.json` in the private progress-sync repo. Practice and the hub use the same reviewedToday:
+
+1. If `journey.events` is an array, sum `count` on entries with `type: "study"` whose `date` is today's `YYYY-MM-DD` in Europe/Lisbon. A missing or non-positive `count` contributes 1. Each rating adds 1 to that day's single event. The event shape stays `{ date, type: "study", label, count }`.
+2. If `journey.events` is not an array, count `srs.<cardId>.last` values (Unix epoch milliseconds from the rating) whose Europe/Lisbon calendar day is today.
+
+`remaining = min(due, max(0, 20 - reviewedToday))`. Due cards are learning words with no SRS row, or `srs[id].due <= now`.
+
+Optional `game` (old files without it still load): `xp` (10 per rating), `streak`, `lastGoalDate`, `combo`, `comboAt`, `bestCombo`, `celebratedDate`. Level is `1 + floor(xp / 100)`. Merge keeps the higher XP and does not drop `status`, `srs`, or `journey`.
 
 ## Enable GitHub Pages
 

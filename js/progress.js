@@ -260,7 +260,7 @@
         .join("") +
       "</div>" +
       '<button type="button" class="primary-action" id="progress-study-due">' +
-      "<span><small>Spaced repetition</small><strong>Study due cards</strong></span>" +
+      "<span><small>Daily goal</small><strong>Practice due cards</strong></span>" +
       '<span class="primary-arrow" aria-hidden="true">→</span></button>'
     );
   }
@@ -712,9 +712,9 @@
     if (studyBtn) {
       studyBtn.addEventListener("click", function () {
         if (typeof global.App.showTab === "function") {
-          global.App.showTab("study");
+          global.App.showTab("practice");
         }
-        history.replaceState(null, "", "#study");
+        history.replaceState(null, "", "#practice");
       });
     }
   }

@@ -11,6 +11,10 @@
     status: "ml-chinese-status-v1",
     srs: "ml-chinese-srs-v1",
     journey: "ml-chinese-journey-v1",
+    // Optional. Older files omit it and still load.
+    // reviewedToday is not stored here: the hub sums journey.events[].count
+    // for type "study" dated today in Europe/Lisbon, else counts srs.*.last.
+    game: "ml-chinese-game-v1",
   };
 
   function readAll() {
@@ -84,11 +88,26 @@
   }
 
   function merge(local, incoming) {
-    return {
+    local = local || {};
+    incoming = incoming || {};
+    var merged = {
       status: Object.assign({}, local.status || {}, incoming.status || {}),
       srs: mergeSrs(local.srs, incoming.srs),
       journey: mergeJourney(local.journey, incoming.journey),
     };
+    var game = global.Daily && typeof global.Daily.mergeGame === "function"
+      ? global.Daily.mergeGame(local.game, incoming.game, merged.journey)
+      : (incoming.game || local.game || null);
+    if (game) merged.game = game;
+    return merged;
+  }
+
+  function overlayWrite(remoteData, next) {
+    var base = remoteData && typeof remoteData === "object" ? Object.assign({}, remoteData) : {};
+    Object.keys(next || {}).forEach(function (key) {
+      if (next[key] !== undefined) base[key] = next[key];
+    });
+    return base;
   }
 
   var DEBOUNCE_MS = 8000;
@@ -98,7 +117,17 @@
   var saveTimer = null;
 
   function payload() {
-    return Object.assign({ app: APP, version: 1, exportedAt: new Date().toISOString() }, readAll());
+    var all = readAll();
+    var body = {
+      app: APP,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      status: all.status || {},
+      srs: all.srs || {},
+      journey: all.journey || { snapshots: [], events: [], firstKnown: {} },
+    };
+    if (all.game && typeof all.game === "object" && !Array.isArray(all.game)) body.game = all.game;
+    return body;
   }
 
   function applyData(data) {
@@ -111,6 +140,7 @@
       }
       var merged = merge(local, data);
       Object.keys(KEYS).forEach(function (k) {
+        if (merged[k] == null) return;
         localStorage.setItem(KEYS[k], JSON.stringify(merged[k]));
       });
     } finally {
@@ -134,6 +164,7 @@
       status: data.status || {},
       srs: data.srs || {},
       journey: data.journey || {},
+      game: data.game || null,
     });
   }
 
@@ -142,11 +173,17 @@
     var srs = (data && data.srs) || {};
     var journey = (data && data.journey) || {};
     var first = journey.firstKnown || {};
+    var game = (data && data.game) || {};
     return Object.keys(status).length > 0 ||
       Object.keys(srs).length > 0 ||
       (journey.snapshots && journey.snapshots.length > 0) ||
       (journey.events && journey.events.length > 0) ||
-      Object.keys(first).length > 0;
+      Object.keys(first).length > 0 ||
+      game.xp > 0 ||
+      game.streak > 0 ||
+      !!game.lastGoalDate ||
+      game.combo > 0 ||
+      game.bestCombo > 0;
   }
 
   function pad2(n) {
@@ -223,7 +260,7 @@
   function syncWithRetry(isRetry) {
     return global.GhSync.fetch(APP).then(function (remote) {
       if (remote) applyData(remote.data);
-      var next = payload();
+      var next = overlayWrite(remote && remote.data, payload());
       if (remote && fingerprint(remote.data) === fingerprint(next)) return;
       if (!remote && !hasProgress(next)) return;
       return global.GhSync.write(APP, next, remote && remote.sha).catch(function (err) {
@@ -305,7 +342,7 @@
     Storage.prototype.setItem = function (key, value) {
       nativeSetItem.call(this, key, value);
       if (applying || this !== localStorage) return;
-      if (key !== KEYS.status && key !== KEYS.srs && key !== KEYS.journey) return;
+      if (key !== KEYS.status && key !== KEYS.srs && key !== KEYS.journey && key !== KEYS.game) return;
       schedulePush();
     };
   }
@@ -364,7 +401,14 @@
     }
   }
 
-  global.ChineseBackup = { merge: merge, mergeSrs: mergeSrs, mergeJourney: mergeJourney };
+  global.ChineseBackup = {
+    merge: merge,
+    mergeSrs: mergeSrs,
+    mergeJourney: mergeJourney,
+    overlayWrite: overlayWrite,
+    fingerprint: fingerprint,
+    payload: payload,
+  };
 
   if (typeof document !== "undefined") {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire);

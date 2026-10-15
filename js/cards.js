@@ -199,23 +199,24 @@
     if (els.easy) els.easy.disabled = !show;
   }
 
+  function dailyReviewed() {
+    if (!global.Daily || typeof global.Daily.reviewedToday !== 'function') return 0;
+    return global.Daily.reviewedToday();
+  }
+
   function updateProgress() {
+    var reviewed = dailyReviewed();
+    var goal = global.Daily && global.Daily.GOAL ? global.Daily.GOAL : 20;
+    var shown = reviewed > goal ? goal : reviewed;
+    var pct = Math.round((shown / goal) * 100);
     if (!session.active) {
       if (els.progress) els.progress.textContent = '';
       if (els.progressFill) els.progressFill.style.width = '0%';
       return;
     }
-    var done = session.index;
-    var total = session.queue.length || 1;
-    var pos = Math.min(session.index + 1, session.queue.length);
-    var pct = Math.round((done / total) * 100);
-    if (session.index >= session.queue.length) pct = 100;
     if (els.progressFill) els.progressFill.style.width = pct + '%';
-    if (els.progress) {
-      els.progress.textContent =
-        (session.queue.length ? pos : 0) + ' / ' + session.queue.length +
-        ' · ' + Math.max(0, session.queue.length - session.index) + ' left';
-    }
+    if (els.progress) els.progress.textContent = shown + '/' + goal;
+    if (global.Daily && typeof global.Daily.paint === 'function') global.Daily.paint();
   }
 
 
@@ -476,16 +477,21 @@
     session.index += 1;
     session.flipped = false;
     if (session.index >= session.queue.length) {
-      if (els.progressFill) els.progressFill.style.width = '100%';
-      if (els.progress) {
-        els.progress.textContent =
-          session.totalDueAtStart + ' / ' + session.totalDueAtStart + ' · done';
-      }
       endSession();
       setVisible(els.session, false);
       setVisible(els.idle, true);
-      setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Session complete. The page turns — start again anytime.';
+      if (global.Daily && typeof global.Daily.paint === 'function') global.Daily.paint();
+      if (session.celebrate && global.Daily && typeof global.Daily.showCelebration === 'function') {
+        global.Daily.showCelebration();
+      }
+      session.celebrate = false;
+      var snap = global.Daily && typeof global.Daily.snapshot === 'function'
+        ? global.Daily.snapshot(getAppCards())
+        : null;
+      if (!snap || !snap.done) {
+        setVisible(els.empty, true);
+        if (els.empty) els.empty.textContent = 'Session complete. Start again whenever you are ready.';
+      }
       return;
     }
     renderCard();
@@ -535,8 +541,12 @@
 
     var queue = cards.filter(function (c) { return dueSet[c.id]; });
     queue = shuffle(queue);
+    var snap = global.Daily && typeof global.Daily.snapshot === 'function'
+      ? global.Daily.snapshot(getAppCards())
+      : null;
+    if (snap) queue = queue.slice(0, snap.remaining);
 
-    session.active = true;
+    session.celebrate = false;
     session.queue = queue;
     session.index = 0;
     session.flipped = false;
@@ -544,12 +554,19 @@
     ensureCharactersLoaded();
 
     if (!queue.length) {
+      session.active = false;
       setVisible(els.idle, true);
       setVisible(els.session, false);
+      if (snap && snap.done && global.Daily && typeof global.Daily.paint === 'function') {
+        global.Daily.paint();
+        return;
+      }
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Your desk is clear — no cards due. Widen filters, or return tomorrow.';
+      if (els.empty) els.empty.textContent = 'Your desk is clear — no cards due in this topic. Widen the filter, or return tomorrow.';
       return;
     }
+
+    session.active = true;
 
     setVisible(els.idle, false);
     setVisible(els.empty, false);
@@ -571,9 +588,13 @@
     var card = currentCard();
     if (!card || !global.SRS) return;
 
-    global.SRS.review(card.id, rating);
+    var reviewed = global.SRS.review(card.id, rating);
     if (global.JourneyStore && typeof global.JourneyStore.logStudy === "function") {
       global.JourneyStore.logStudy(1);
+    }
+    if (global.Daily && typeof global.Daily.recordReview === "function") {
+      var result = global.Daily.recordReview(rating, reviewed && reviewed.last);
+      if (result && result.justHit) session.celebrate = true;
     }
     advanceQueue();
   }

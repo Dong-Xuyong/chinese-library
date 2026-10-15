@@ -17,6 +17,24 @@
     return y + "-" + m + "-" + day;
   }
 
+  // Study events are dated in Europe/Lisbon so the hub's reviewedToday sum
+  // matches Practice. The event shape stays { date, type, label, count }.
+  function studyDay() {
+    if (global.Daily && typeof global.Daily.lisbonDay === "function") {
+      return global.Daily.lisbonDay(new Date());
+    }
+    try {
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Lisbon",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+    } catch (e) {
+      return todayISO();
+    }
+  }
+
   function emptyState() {
     return { snapshots: [], events: [], firstKnown: {} };
   }
@@ -123,7 +141,7 @@
   function logStudy(count, label) {
     var n = typeof count === "number" && count > 0 ? count : 1;
     var state = load();
-    var day = todayISO();
+    var day = studyDay();
     var updated = false;
     for (var i = state.events.length - 1; i >= 0; i--) {
       var e = state.events[i];
