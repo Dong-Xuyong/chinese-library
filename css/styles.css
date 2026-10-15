@@ -1620,8 +1620,185 @@ html.dark .chip-keyword.is-active {
 
 .study-filters {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
+}
+
+.practice-goal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.15rem;
+  margin-top: 0.85rem;
+}
+
+.goal-ring {
+  position: relative;
+  width: 148px;
+  height: 148px;
+  margin-bottom: 0.35rem;
+}
+
+.goal-ring svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.goal-ring-track,
+.goal-ring-value {
+  fill: none;
+  stroke-width: 8;
+}
+
+.goal-ring-track {
+  stroke: var(--ink-line);
+}
+
+.goal-ring-value {
+  stroke: var(--vermillion);
+  stroke-linecap: round;
+  stroke-dasharray: 289.027;
+  stroke-dashoffset: 289.027;
+  transition: stroke-dashoffset 0.45s var(--ease-out);
+}
+
+.goal-ring.is-complete .goal-ring-value {
+  stroke: var(--teal);
+}
+
+.goal-ring-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+}
+
+.goal-ring-label strong {
+  color: var(--paper);
+  font-family: var(--font-ui);
+  font-size: 1.7rem;
+  font-weight: 750;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.goal-ring-label span {
+  color: var(--paper-muted);
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.practice-streak {
+  margin: 0.35rem 0 0;
+  color: var(--vermillion);
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.practice-goal .study-lead {
+  margin-top: 0.2rem;
+}
+
+.practice-session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.practice-session-row .study-progress {
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--paper);
+}
+
+.practice-combo {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--vermillion-soft);
+  color: var(--vermillion);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.practice-combo[hidden],
+#study-start[hidden],
+#practice-done[hidden],
+.practice-celebrate[hidden] {
+  display: none !important;
+}
+
+.practice-celebrate {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: calc(var(--chrome-bottom) + 14px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 168px;
+  padding: 0.85rem 1.15rem 0.95rem;
+  border: 1px solid var(--ink-line);
+  border-radius: calc(var(--radius) + 4px);
+  background:
+    radial-gradient(circle at 50% 0%, var(--vermillion-soft), transparent 70%),
+    var(--ink-elevated);
+  box-shadow: var(--dash-shadow);
+  color: var(--paper);
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.practice-celebrate strong {
+  font-family: var(--font-ui);
+  font-size: 1.45rem;
+  letter-spacing: -0.04em;
+}
+
+.practice-celebrate span {
+  color: var(--paper-muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.practice-celebrate.is-on {
+  animation: practice-pop 2.6s var(--ease-out) both;
+}
+
+@keyframes practice-pop {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.96);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.98);
+  }
 }
 
 .btn {
@@ -2717,6 +2894,15 @@ html.dark .chip-keyword.is-active {
 
   .tab {
     font-size: 0.62rem;
+  }
+
+  .goal-ring {
+    width: 124px;
+    height: 124px;
+  }
+
+  .goal-ring-label strong {
+    font-size: 1.45rem;
   }
 
   .srs-grid {

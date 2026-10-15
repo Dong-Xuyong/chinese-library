@@ -59,13 +59,15 @@
   }
 
   function cloneCard(card) {
-    return {
+    var copy = {
       ease: card.ease,
       interval: card.interval,
       repetitions: card.repetitions,
       due: card.due,
       lapses: card.lapses,
     };
+    if (typeof card.last === "number") copy.last = card.last;
+    return copy;
   }
 
   /**

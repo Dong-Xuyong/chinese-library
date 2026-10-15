@@ -394,61 +394,28 @@
     history.replaceState(null, "", "#library");
   }
 
-  function studyDueCount() {
-    if (!window.SRS || typeof window.SRS.stats !== "function") return 0;
-    const ids = App.cards.filter((c) => c.status !== "known").map((c) => c.id);
-    const srs = window.SRS.stats(ids);
-    return (srs && srs.due) || 0;
+  function canonicalTab(name) {
+    if (name === "library" || name === "progress") return name;
+    return "practice";
   }
 
   function enhanceStudyDashboard() {
     const idle = document.getElementById("study-idle");
     const start = document.getElementById("study-start");
     const hero = idle && idle.querySelector(".study-hero");
-    const title = idle && idle.querySelector(".study-title");
-    const lead = idle && idle.querySelector(".study-lead");
     const bar = document.querySelector("#study-session .study-progress-bar");
     const fill = document.getElementById("study-progress-fill");
 
-    if (hero) {
-      hero.classList.add("learning-hero");
-      hero.removeAttribute("aria-hidden");
-      if (title && !title.id) title.id = "study-title";
-      if (title) hero.setAttribute("aria-labelledby", title.id);
-      if (!hero.querySelector(".hero-topline")) {
-        const topline = document.createElement("div");
-        topline.className = "hero-topline";
-        topline.innerHTML =
-          '<span class="eyebrow">Study</span><span class="hero-xp" id="study-hero-due"></span>';
-        hero.insertBefore(topline, hero.firstChild);
-      }
-      if (title && !hero.contains(title)) hero.appendChild(title);
-      if (lead && !hero.contains(lead)) hero.appendChild(lead);
-    }
-
-    if (start) {
-      start.classList.add("primary-action");
-      if (!start.querySelector("strong")) {
-        start.innerHTML =
-          '<span><small id="study-start-meta">Anki-style review</small><strong>Start study</strong></span>' +
-          '<span class="primary-arrow" aria-hidden="true">→</span>';
-      }
-    }
-
+    if (hero) hero.classList.add("learning-hero");
+    if (start) start.classList.add("primary-action");
     if (bar) {
       bar.classList.add("progress-track");
       bar.setAttribute("role", "progressbar");
       bar.setAttribute("aria-valuemin", "0");
-      bar.setAttribute("aria-valuemax", "100");
+      bar.setAttribute("aria-valuemax", "20");
     }
     if (fill) fill.classList.add("progress-fill");
-
-    const due = studyDueCount();
-    const dueLabel = due === 1 ? "1 card due" : due + " cards due";
-    const dueEl = document.getElementById("study-hero-due");
-    const metaEl = document.getElementById("study-start-meta");
-    if (dueEl) dueEl.textContent = due ? dueLabel : "Ready when you are";
-    if (metaEl) metaEl.textContent = due ? dueLabel : "Anki-style review";
+    if (window.Daily && typeof window.Daily.paint === "function") window.Daily.paint();
   }
 
   function recomputeCounts() {
@@ -999,7 +966,7 @@
   }
 
   function showTab(name) {
-    const tab = name === "study" || name === "progress" ? name : "library";
+    const tab = canonicalTab(name);
     // Re-query in case els were stale
     const viewLibrary = els.viewLibrary || document.getElementById("view-library");
     const viewStudy = els.viewStudy || document.getElementById("view-study");
@@ -1013,8 +980,8 @@
       viewLibrary.style.display = tab === "library" ? "" : "none";
     }
     if (viewStudy) {
-      viewStudy.hidden = tab !== "study";
-      viewStudy.style.display = tab === "study" ? "" : "none";
+      viewStudy.hidden = tab !== "practice";
+      viewStudy.style.display = tab === "practice" ? "" : "none";
     }
     if (viewProgress) {
       viewProgress.hidden = tab !== "progress";
@@ -1026,8 +993,10 @@
     }
 
     document.querySelectorAll(".tab-bar .tab").forEach((t) => {
-      t.classList.toggle("is-active", t.dataset.tab === tab);
+      t.classList.toggle("is-active", canonicalTab(t.dataset.tab) === tab);
     });
+
+    if (tab === "practice") enhanceStudyDashboard();
 
     if (tab === "progress") {
       requestAnimationFrame(() => {
@@ -1044,16 +1013,16 @@
   }
 
   function parseHash() {
-    const hash = (location.hash || "#library").slice(1);
+    const hash = (location.hash || "#practice").replace(/^#/, "");
     if (hash.startsWith("word/")) {
       showTab("library");
       const id = decodeURIComponent(hash.slice(5));
       if (App.cards.length) openDetail(id);
       return;
     }
-    if (hash === "study") {
+    if (hash === "library") {
       closeDetail();
-      showTab("study");
+      showTab("library");
       return;
     }
     if (hash === "progress") {
@@ -1062,7 +1031,7 @@
       return;
     }
     closeDetail();
-    showTab("library");
+    showTab("practice");
   }
 
   function wireEvents() {
@@ -1130,10 +1099,10 @@
 
     els.tabs.forEach((tab) => {
       tab.addEventListener("click", () => {
-        const name = tab.dataset.tab || "library";
+        const name = tab.dataset.tab || "practice";
         closeDetail();
         showTab(name);
-        history.replaceState(null, "", "#" + name);
+        history.replaceState(null, "", "#" + canonicalTab(name));
       });
     });
 
@@ -1248,6 +1217,6 @@
 
   wireEvents();
   syncLayoutMode();
-  showTab("library");
+  parseHash();
   loadVocab();
 })();
