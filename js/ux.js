@@ -269,6 +269,9 @@
         manualSpeak = false;
         global.VocabAudio.play(live.queue[live.index]);
       }
+      if (global.Cards && typeof global.Cards.enterPracticeFocus === "function") {
+        global.Cards.enterPracticeFocus();
+      }
       return true;
     } finally {
       suppressAuto = false;
