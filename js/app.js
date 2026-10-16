@@ -156,7 +156,7 @@
 
   function buildRow(card) {
     const row = document.createElement("div");
-    row.className = "list-row";
+    row.className = "list-row dx-card";
     row.setAttribute("role", "listitem");
     row.dataset.id = card.id;
     rowById.set(card.id, row);
@@ -993,7 +993,10 @@
     }
 
     document.querySelectorAll(".tab-bar .tab").forEach((t) => {
-      t.classList.toggle("is-active", canonicalTab(t.dataset.tab) === tab);
+      const on = canonicalTab(t.dataset.tab) === tab;
+      t.classList.toggle("is-active", on);
+      if (on) t.setAttribute("aria-current", "page");
+      else t.removeAttribute("aria-current");
     });
 
     if (tab === "practice") enhanceStudyDashboard();
