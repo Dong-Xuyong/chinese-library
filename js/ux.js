@@ -203,10 +203,25 @@
     setShown("study-session", true);
   }
 
+  function goalRoom() {
+    var goal = global.Daily && global.Daily.GOAL ? global.Daily.GOAL : 20;
+    var reviewed = 0;
+    if (global.Daily && typeof global.Daily.reviewedToday === "function") {
+      reviewed = global.Daily.reviewedToday();
+    }
+    if (typeof reviewed !== "number" || !isFinite(reviewed) || reviewed < 0) reviewed = 0;
+    var room = goal - reviewed;
+    return room > 0 ? room : 0;
+  }
+
   function resumeSession(data) {
     data = data || load();
     if (!data.queueIds || !data.queueIds.length) return false;
     if (!global.Cards || typeof global.Cards.renderCard !== "function" || !session()) return false;
+    if (goalRoom() <= 0) {
+      paintContinue();
+      return false;
+    }
     resumeLock += 1;
     suppressAuto = true;
     try {
@@ -224,12 +239,6 @@
         if (byId[data.queueIds[j]]) queue.push(byId[data.queueIds[j]]);
       }
       if (!queue.length) return false;
-      live.queue = queue;
-      live.active = true;
-      live.starting = false;
-      live.locked = false;
-      live.revealAfter = 0;
-      live.filter = { keyword: data.deck || undefined };
       var idx = data.index || 0;
       if (data.cardId) {
         for (var k = 0; k < queue.length; k++) {
@@ -241,6 +250,16 @@
       }
       if (idx < 0) idx = 0;
       if (idx >= queue.length) idx = queue.length - 1;
+      var room = goalRoom();
+      if (room <= 0) return false;
+      if (queue.length - idx > room) queue = queue.slice(0, idx + room);
+      if (!queue.length || idx >= queue.length) return false;
+      live.queue = queue;
+      live.active = true;
+      live.starting = false;
+      live.locked = false;
+      live.revealAfter = 0;
+      live.filter = { keyword: data.deck || undefined };
       live.index = idx;
       live.flipped = !!data.flipped;
       showSession();
@@ -335,7 +354,7 @@
     var live = session();
     var busy = !!(live && live.active && sessionOpen());
     var hasPlace = !!((data.queueIds && data.queueIds.length) || data.cardId);
-    if (!hasPlace || busy) {
+    if (!hasPlace || busy || goalRoom() <= 0) {
       button.hidden = true;
       return;
     }
@@ -482,10 +501,11 @@
     var live = session();
     if (!live || !live.active || !live.queue || live.queue.length < 2) return false;
     if (typeof global.Cards.renderCard !== "function") return false;
-    var count = live.queue.length;
-    var next = (live.index + delta) % count;
-    if (next < 0) next += count;
-    live.index = next;
+    if (typeof live.index !== "number" || live.index < 0 || live.index >= live.queue.length) return false;
+    if (live.queue.length - live.index < 2) return false;
+    if (delta > 0) live.queue.push(live.queue.splice(live.index, 1)[0]);
+    else if (delta < 0) live.queue.splice(live.index, 0, live.queue.pop());
+    else return false;
     live.flipped = false;
     live.locked = false;
     live.revealAfter = 0;
@@ -647,6 +667,7 @@
   }
 
   function onPointerDown(event) {
+    blockClick = false;
     if (pointer) return;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     var card = event.currentTarget;
