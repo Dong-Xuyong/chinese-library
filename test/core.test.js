@@ -125,6 +125,32 @@ test("pinyin tone marks, umlauts, and neutral digits", () => {
   assert.equal(fold("nv"), fold("nǚ"));
   assert.equal(fold("nve4"), fold("nüè"));
   assert.equal(fold("envy").includes(fold("envy")), true);
+
+  const card = {
+    hanzi: "頂尖",
+    pinyin: "Dǐng jiān",
+    gloss: "top-notch; pinnacle",
+    pos: "adjective",
+    keywords: ["adjective", "learning", "notch", "pinnacle", "top"],
+  };
+  const ni = {
+    hanzi: "年",
+    pinyin: "nián",
+    gloss: "year",
+    pos: "noun",
+    keywords: ["learning", "year"],
+  };
+  const nine = { hanzi: "九", pinyin: "jiǔ", gloss: "nine", pos: "numeral", keywords: ["known"] };
+  assert.equal(ctx.Pinyin.matches("nǐ", card), false);
+  assert.equal(ctx.Pinyin.matches("ni3", card), false);
+  assert.equal(ctx.Pinyin.matches("learning", card), false);
+  assert.equal(ctx.Pinyin.matches("nǐ", ni), true);
+  assert.equal(ctx.Pinyin.matches("ni3", ni), true);
+  assert.equal(ctx.Pinyin.matches("nian", ni), true);
+  assert.equal(ctx.Pinyin.matches("nine", nine), true);
+  assert.equal(ctx.Pinyin.matches("你", { hanzi: "你好", pinyin: "nǐ hǎo", gloss: "hello" }), true);
+  assert.equal(ctx.Pinyin.matches("ni hao", { hanzi: "你好", pinyin: "nǐ hǎo", gloss: "hello" }), true);
+  assert.equal(ctx.Pinyin.matches("time", { hanzi: "时", pinyin: "shí", gloss: "time", keywords: ["time"] }), true);
 });
 
 test("corrupt SRS storage is repaired and later reviews are kept", () => {

@@ -107,9 +107,54 @@
       .replace(/\u00fc/g, "u");
   }
 
+  function queryTokens(value) {
+    return foldPinyin(value).split(/[^a-z0-9]+/).filter(Boolean);
+  }
+
+  // Free-text search. "learning"/"known" are status, not vocabulary, so a
+  // query like nǐ must not match every card still being learned.
+  function matchesQuery(query, card) {
+    var q = foldPinyin(query).trim();
+    if (!q) return true;
+    card = card || {};
+    var hanzi = String(card.hanzi || "");
+    var raw = String(query || "").trim().toLowerCase();
+    if (raw && hanzi.toLowerCase().indexOf(raw) >= 0) return true;
+
+    var pinyin = foldPinyin(card.pinyin);
+    var gloss = foldPinyin(card.gloss);
+    if (q.indexOf(" ") >= 0) {
+      return pinyin.indexOf(q) >= 0 || gloss.indexOf(q) >= 0;
+    }
+
+    var syllables = queryTokens(card.pinyin);
+    for (var i = 0; i < syllables.length; i++) {
+      if (syllables[i].indexOf(q) === 0) return true;
+    }
+
+    var parts = [card.gloss, card.pos];
+    var kws = Array.isArray(card.keywords) ? card.keywords : [];
+    for (var k = 0; k < kws.length; k++) {
+      if (kws[k] !== "learning" && kws[k] !== "known") parts.push(kws[k]);
+    }
+    var letters = /^[a-z0-9]+$/.test(q);
+    for (var p = 0; p < parts.length; p++) {
+      var bits = queryTokens(parts[p]);
+      for (var b = 0; b < bits.length; b++) {
+        if (letters) {
+          if (bits[b].indexOf(q) === 0) return true;
+        } else if (bits[b].indexOf(q) >= 0) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   global.Pinyin = {
     format: formatPinyin,
     fold: foldPinyin,
+    matches: matchesQuery,
   };
 
   function $(id) {

@@ -154,13 +154,10 @@
       if (!kws.includes(keyword)) return false;
     }
     if (!q) return true;
-    const hay = [
-      card.hanzi,
-      card.pinyin,
-      card.gloss,
-      card.pos,
-      ...(Array.isArray(card.keywords) ? card.keywords : []),
-    ]
+    if (window.Pinyin && typeof window.Pinyin.matches === "function") {
+      return window.Pinyin.matches(q, card);
+    }
+    const hay = [card.hanzi, card.pinyin, card.gloss, card.pos]
       .map(normalize)
       .join(" ");
     return hay.includes(q);
