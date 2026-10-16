@@ -71,10 +71,25 @@
   }
 
   function normalize(s) {
+    if (window.Pinyin && typeof window.Pinyin.fold === "function") {
+      return window.Pinyin.fold(s);
+    }
     return String(s ?? "")
       .toLowerCase()
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function showPinyin(value) {
+    if (window.Pinyin && typeof window.Pinyin.format === "function") {
+      return window.Pinyin.format(value || "");
+    }
+    return value || "";
+  }
+
+  function libraryShown() {
+    const view = els.viewLibrary || document.getElementById("view-library");
+    return !!(view && !view.hidden);
   }
 
   function setLoading(on) {
@@ -95,8 +110,9 @@
 
   function applyFilters() {
     App.filtered = App.cards.filter(matchesFilters);
-    renderList();
+    if (els.list && libraryShown()) els.list.scrollTop = 0;
     renderStats();
+    renderList();
   }
 
   function renderStats() {
@@ -116,6 +132,8 @@
   let persistDelay = 0;
   let persistIdle = 0;
   let studyRefreshTimer = 0;
+  let renderGen = 0;
+  const statusTapAt = new Map();
 
   function indexCards() {
     cardById.clear();
@@ -164,7 +182,7 @@
     const open = document.createElement("button");
     open.type = "button";
     open.className = "list-open";
-    const openLabel = [card.hanzi, card.pinyin, card.gloss].filter(Boolean).join(", ");
+    const openLabel = [card.hanzi, showPinyin(card.pinyin), card.gloss].filter(Boolean).join(", ");
     open.setAttribute("aria-label", `Open ${openLabel}`);
     open.addEventListener("click", () => openDetail(card.id));
 
@@ -180,7 +198,7 @@
     const pinyin = document.createElement("span");
     pinyin.className = "list-pinyin";
     pinyin.setAttribute("aria-hidden", "true");
-    pinyin.textContent = card.pinyin || "";
+    pinyin.textContent = showPinyin(card.pinyin);
 
     const gloss = document.createElement("span");
     gloss.className = "list-gloss";
@@ -207,10 +225,39 @@
     return row;
   }
 
-  function renderList() {
+  function clearEmptyState() {
     if (!els.list) return;
+    els.list.querySelectorAll(":scope > .list-empty, :scope > .list-error").forEach((node) => {
+      node.remove();
+    });
+  }
+
+  function ensureRow(card) {
+    const existing = rowById.get(card.id);
+    if (existing) return existing;
+    return buildRow(card);
+  }
+
+  function listInSync() {
+    if (!els.list) return false;
+    const rows = els.list.querySelectorAll(":scope > .list-row");
+    if (rows.length !== App.filtered.length) return false;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].dataset.id !== App.filtered[i].id) return false;
+    }
+    return true;
+  }
+
+  function renderList() {
+    const job = ++renderGen;
+    if (!els.list) return;
+    if (!libraryShown()) {
+      App.listDirty = true;
+      return;
+    }
+    App.listDirty = false;
     if (!App.filtered.length) {
-      rowById.clear();
+      els.list.querySelectorAll(":scope > .list-row").forEach((row) => row.remove());
       els.list.innerHTML =
         `<p class="list-empty">` +
         `<span class="list-empty-title">此架暂空</span>` +
@@ -218,11 +265,34 @@
         `</p>`;
       return;
     }
+    if (listInSync()) return;
 
-    rowById.clear();
-    const frag = document.createDocumentFragment();
-    for (const card of App.filtered) frag.appendChild(buildRow(card));
-    els.list.replaceChildren(frag);
+    clearEmptyState();
+    const want = new Set(App.filtered.map((card) => card.id));
+    els.list.querySelectorAll(":scope > .list-row").forEach((row) => {
+      if (!want.has(row.dataset.id)) row.remove();
+    });
+
+    const missing = [];
+    for (const card of App.filtered) {
+      const row = rowById.get(card.id);
+      if (!row || row.parentElement !== els.list) missing.push(card);
+    }
+    const placeBatch = (batch) => {
+      for (const card of batch) {
+        if (job !== renderGen) return;
+        const row = rowById.get(card.id);
+        if (row && row.parentElement === els.list) continue;
+        placeRow(card);
+      }
+    };
+    placeBatch(missing.splice(0, 24));
+    const pump = () => {
+      if (job !== renderGen || !libraryShown() || !missing.length) return;
+      placeBatch(missing.splice(0, 80));
+      if (missing.length && job === renderGen) requestAnimationFrame(pump);
+    };
+    if (missing.length) requestAnimationFrame(pump);
   }
 
   function paintRowStatus(row, card) {
@@ -258,39 +328,52 @@
   }
 
   function syncRow(card) {
-    const row = rowElement(card.id);
     const visible = matchesFilters(card);
-    if (row && visible) {
-      paintRowStatus(row, card);
-    } else if (row && !visible) {
-      row.remove();
-      rowById.delete(card.id);
+    const row = rowElement(card.id);
+    if (!visible) {
       removeFiltered(card);
-      if (!App.filtered.length) renderList();
-    } else if (!row && visible && els.list) {
-      if (!App.filtered.includes(card)) insertFiltered(card);
-      placeRow(card);
+      if (row) row.remove();
+      if (libraryShown() && els.list && !els.list.querySelector(":scope > .list-row")) renderList();
+      return;
+    }
+    if (!App.filtered.includes(card)) insertFiltered(card);
+    if (row) {
+      paintRowStatus(row, card);
+      return;
+    }
+    if (!libraryShown()) {
+      App.listDirty = true;
+      return;
+    }
+    placeRow(card);
+    const placed = rowById.get(card.id);
+    if (placed) {
+      placed.classList.add("is-status-changed");
+      const pill = placed.querySelector(".list-status");
+      if (pill) pill.classList.add("is-flash");
     }
   }
 
   function placeRow(card) {
-    const row = buildRow(card);
-    row.classList.add("is-status-changed");
-    const pill = row.querySelector(".list-status");
-    if (pill) pill.classList.add("is-flash");
+    if (!els.list) return null;
+    clearEmptyState();
+    const row = ensureRow(card);
+    if (row.parentElement === els.list) return row;
     const order = cardOrder.get(card.id);
-    const rows = els.list.querySelectorAll(".list-row");
-    if (!rows.length) {
-      els.list.replaceChildren(row);
-      return;
+    const rows = els.list.querySelectorAll(":scope > .list-row");
+    const last = rows[rows.length - 1];
+    if (!last || (cardOrder.get(last.dataset.id) ?? -1) <= order) {
+      els.list.appendChild(row);
+      return row;
     }
     for (const existing of rows) {
-      if (cardOrder.get(existing.dataset.id) > order) {
+      if ((cardOrder.get(existing.dataset.id) ?? Infinity) > order) {
         els.list.insertBefore(row, existing);
-        return;
+        return row;
       }
     }
     els.list.appendChild(row);
+    return row;
   }
 
   function renderPosOptions() {
@@ -537,8 +620,11 @@
     const card = cardById.get(id) || App.cards.find((c) => c.id === id);
     if (!card || !window.StatusStore) return;
     if (status !== "known" && status !== "learning") return;
+    const now = Date.now();
+    if (now - (statusTapAt.get(id) || 0) < 350) return;
     const previous = card.status === "known" ? "known" : "learning";
     if (previous === status) return;
+    statusTapAt.set(id, now);
 
     card.status = status;
     syncStatusKeyword(card);
@@ -651,7 +737,7 @@
       `<div class="origin-head origin-head-lg">` +
       `<div class="origin-char origin-char-lg" aria-hidden="true">${escapeHtml(entry.char || ch)}</div>` +
       `<div class="origin-head-text">` +
-      `<p class="origin-pinyin">${escapeHtml(entry.pinyin || "")}</p>` +
+      `<p class="origin-pinyin">${escapeHtml(showPinyin(entry.pinyin))}</p>` +
       `<p class="origin-meaning">${escapeHtml(entry.meaning || "")}</p>` +
       (type ? `<p class="origin-type-wrap">${type}</p>` : "") +
       `</div></div>` +
@@ -796,7 +882,7 @@
       `<div class="origin-head">` +
       `<div class="origin-char" aria-hidden="true">${escapeHtml(entry.char || ch)}</div>` +
       `<div class="origin-head-text">` +
-      `<p class="origin-pinyin">${escapeHtml(entry.pinyin || "")}</p>` +
+      `<p class="origin-pinyin">${escapeHtml(showPinyin(entry.pinyin))}</p>` +
       `<p class="origin-meaning">${escapeHtml(entry.meaning || "")}</p>` +
       (type ? `<p class="origin-type-wrap">${type}</p>` : "") +
       `</div></div>` +
@@ -863,7 +949,7 @@
         ? `<div class="detail-section">
             <h3>Example</h3>
             ${card.example ? `<p class="detail-example">${escapeHtml(card.example)}</p>` : ""}
-            ${card.examplePinyin ? `<p class="detail-example-pinyin">${escapeHtml(card.examplePinyin)}</p>` : ""}
+            ${card.examplePinyin ? `<p class="detail-example-pinyin">${escapeHtml(showPinyin(card.examplePinyin))}</p>` : ""}
             ${card.exampleEn ? `<p class="detail-example-en">${escapeHtml(card.exampleEn)}</p>` : ""}
           </div>`
         : "";
@@ -886,7 +972,7 @@
     const paint = () => {
       els.detailBody.innerHTML = `
       <h2 id="detail-hanzi" class="detail-hanzi detail-hanzi-glyphs" aria-label="${escapeHtml(card.hanzi)}">${glyphHtml}</h2>
-      <p class="detail-pinyin">${escapeHtml(card.pinyin)}</p>
+      <p class="detail-pinyin">${escapeHtml(showPinyin(card.pinyin))}</p>
       <div class="detail-meta">
         <span class="badge badge-${escapeHtml(card.status)}">${escapeHtml(card.status)}</span>
         <span class="detail-pos">${escapeHtml(card.pos || "")}</span>
@@ -998,6 +1084,8 @@
       if (on) t.setAttribute("aria-current", "page");
       else t.removeAttribute("aria-current");
     });
+
+    if (tab === "library") renderList();
 
     if (tab === "practice") enhanceStudyDashboard();
 
@@ -1124,7 +1212,13 @@
       if (window.Progress && typeof window.Progress.init === "function") {
         window.Progress.init();
       }
-      if (window.Progress && typeof window.Progress.render === "function") {
+      const progressView = document.getElementById("view-progress");
+      if (
+        progressView &&
+        !progressView.hidden &&
+        window.Progress &&
+        typeof window.Progress.render === "function"
+      ) {
         window.Progress.render();
       }
     } catch (err) {
@@ -1135,6 +1229,8 @@
   async function loadVocab() {
     setLoading(true);
     setError("");
+    const startBtn = document.getElementById("study-start");
+    if (startBtn) startBtn.disabled = true;
     try {
       const res = await fetch(VOCAB_URL, { cache: "no-cache" });
       if (!res.ok) throw new Error(`Failed to load vocab (${res.status})`);
@@ -1164,7 +1260,6 @@
       renderPosOptions();
       renderKeywordChips();
       applyFilters();
-      ensureCharacters();
       parseHash();
     } catch (err) {
       console.error(err);
@@ -1193,6 +1288,8 @@
         console.warn(err);
       }
       initStudyModules();
+      const startBtn = document.getElementById("study-start");
+      if (startBtn) startBtn.disabled = false;
       document.dispatchEvent(new CustomEvent("ml-library-ready"));
     };
     if (typeof requestAnimationFrame === "function" && document.visibilityState !== "hidden") {

@@ -753,22 +753,9 @@
   function init() {
     if (bound) return;
     bound = true;
-    ensureJourney();
 
     window.addEventListener("hashchange", function () {
       if ((location.hash || "").replace(/^#/, "") === "progress") render();
-    });
-
-    var tries = 0;
-    var timer = setInterval(function () {
-      tries += 1;
-      if (render() || tries >= 60) clearInterval(timer);
-    }, 100);
-
-    document.querySelectorAll('.tab-bar .tab[data-tab="progress"]').forEach(function (tab) {
-      tab.addEventListener("click", function () {
-        setTimeout(render, 0);
-      });
     });
   }
 

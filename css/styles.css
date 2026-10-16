@@ -736,7 +736,7 @@ body {
   z-index: 1;
   pointer-events: none;
   min-width: 0;
-  font-family: var(--font-ui);
+  font-family: "Noto Sans", var(--font-ui);
   font-size: var(--text-sm);
   line-height: 1.65;
   padding-block: 0.14em;
@@ -943,7 +943,7 @@ body {
 
 .detail-pinyin {
   margin: 0 0 10px;
-  font-family: var(--font-ui);
+  font-family: "Noto Sans", var(--font-ui);
   font-size: var(--text-lg);
   line-height: 1.55;
   padding-block: 0.06em;
@@ -1134,6 +1134,13 @@ body {
 
 .origin-head-text {
   min-width: 0;
+}
+
+.detail-example-pinyin,
+.origin-pinyin,
+.flashcard-origin-meta,
+.flashcard-origin-formula {
+  font-family: "Noto Sans", var(--font-ui);
 }
 
 .origin-pinyin {
@@ -1679,6 +1686,7 @@ body {
 
 .practice-combo[hidden],
 #study-start[hidden],
+#study-empty[hidden],
 #practice-done[hidden],
 .practice-celebrate[hidden] {
   display: none !important;
@@ -1943,6 +1951,7 @@ body {
 }
 
 .flashcard-pinyin {
+  font-family: "Noto Sans", var(--font-ui);
   font-size: 1.2rem;
   line-height: 1.6;
   padding-block: 0.12em;
@@ -2125,6 +2134,13 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin-top: auto;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  background: var(--dx-bg, #f6f4ef);
+  border-top: 1px solid var(--dx-border, var(--ink-line));
 }
 
 .study-actions[hidden] {

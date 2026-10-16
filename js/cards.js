@@ -14,15 +14,103 @@
 
   var session = {
     active: false,
+    starting: false,
+    locked: false,
     queue: [],
     index: 0,
     flipped: false,
     filter: {},
     totalDueAtStart: 0,
+    revealAfter: 0,
   };
 
   var els = {};
   var bound = false;
+  var blockStartClicksUntil = 0;
+
+  var TONE_MARKS = {
+    a: "\u0101\u00e1\u01ce\u00e0",
+    e: "\u0113\u00e9\u011b\u00e8",
+    i: "\u012b\u00ed\u01d0\u00ec",
+    o: "\u014d\u00f3\u01d2\u00f2",
+    u: "\u016b\u00fa\u01d4\u00f9",
+    "\u00fc": "\u01d6\u01d8\u01da\u01dc",
+  };
+
+  function syllableTone(raw) {
+    var original = String(raw || "").trim();
+    if (!original) return "";
+    var lower = original.toLowerCase().replace(/u:/g, "\u00fc").replace(/v/g, "\u00fc");
+    if (!/^[a-z\u00fc]+[1-5]$/.test(lower)) return original;
+    var tone = Number(lower.slice(-1));
+    var syl = lower.slice(0, -1);
+    if (!syl) return original;
+    var upper = original[0] !== original[0].toLowerCase();
+    if (tone === 5) {
+      syl = spellUmlaut(syl);
+      return upper ? syl.charAt(0).toUpperCase() + syl.slice(1) : syl;
+    }
+    var idx = -1;
+    if (syl.indexOf("a") >= 0) idx = syl.indexOf("a");
+    else if (syl.indexOf("e") >= 0) idx = syl.indexOf("e");
+    else if (syl.indexOf("ou") >= 0) idx = syl.indexOf("o");
+    else {
+      for (var i = syl.length - 1; i >= 0; i--) {
+        if ("aeiou\u00fc".indexOf(syl.charAt(i)) >= 0) {
+          idx = i;
+          break;
+        }
+      }
+    }
+    var vowel = idx >= 0 ? syl.charAt(idx) : "";
+    var marks = TONE_MARKS[vowel];
+    if (!marks || tone < 1 || tone > 4) {
+      syl = spellUmlaut(syl);
+      return upper ? syl.charAt(0).toUpperCase() + syl.slice(1) : syl;
+    }
+    var marked = syl.slice(0, idx) + marks.charAt(tone - 1) + syl.slice(idx + 1);
+    marked = spellUmlaut(marked);
+    return upper ? marked.charAt(0).toUpperCase() + marked.slice(1) : marked;
+  }
+
+  function spellUmlaut(syl) {
+    if (syl.indexOf("\u00fc") < 0 && syl.indexOf("\u01d6") < 0 && syl.indexOf("\u01d8") < 0 && syl.indexOf("\u01da") < 0 && syl.indexOf("\u01dc") < 0) {
+      return syl;
+    }
+    var head = syl.charAt(0);
+    if (head === "j" || head === "q" || head === "x" || head === "y" || head === "J" || head === "Q" || head === "X" || head === "Y") {
+      return syl
+        .replace(/\u00fc/g, "u")
+        .replace(/\u01d6/g, "\u016b")
+        .replace(/\u01d8/g, "\u00fa")
+        .replace(/\u01da/g, "\u01d4")
+        .replace(/\u01dc/g, "\u00f9");
+    }
+    return syl;
+  }
+
+  function formatPinyin(value) {
+    return String(value == null ? "" : value)
+      .split(/(\s+)/)
+      .map(function (part) {
+        return /\s/.test(part) ? part : syllableTone(part);
+      })
+      .join("");
+  }
+
+  function foldPinyin(value) {
+    var text = formatPinyin(value).replace(/u:/gi, "\u00fc").replace(/v/gi, "\u00fc");
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\u00fc/g, "u");
+  }
+
+  global.Pinyin = {
+    format: formatPinyin,
+    fold: foldPinyin,
+  };
 
   function $(id) {
     return document.getElementById(id);
@@ -271,7 +359,7 @@
     if (entry.pinyin || entry.meaning) {
       parts.push(
         '<p class="flashcard-origin-meta">' +
-          escapeHtml([entry.pinyin, entry.meaning].filter(Boolean).join(' · ')) +
+          escapeHtml([formatPinyin(entry.pinyin || ''), entry.meaning].filter(Boolean).join(' · ')) +
           '</p>'
       );
     }
@@ -311,7 +399,7 @@
       var entry = getCharacterEntry(ch);
       var meta = '';
       if (entry) {
-        meta = [entry.pinyin, entry.meaning].filter(Boolean).join(' · ');
+        meta = [formatPinyin(entry.pinyin || ''), entry.meaning].filter(Boolean).join(' · ');
       }
       rows.push(
         '<div class="flashcard-char-item">' +
@@ -384,7 +472,7 @@
     if (els.back) {
       if (session.flipped) {
         var parts = [];
-        if (card.pinyin) parts.push('<div class="flashcard-pinyin">' + escapeHtml(card.pinyin) + '</div>');
+        if (card.pinyin) parts.push('<div class="flashcard-pinyin">' + escapeHtml(formatPinyin(card.pinyin)) + '</div>');
         if (card.pos) parts.push('<div class="flashcard-pos">' + escapeHtml(card.pos) + '</div>');
         if (card.gloss) parts.push('<div class="flashcard-gloss">' + escapeHtml(card.gloss) + '</div>');
         parts.push(audioButtonHtml(card));
@@ -417,7 +505,7 @@
             var ch = btn.getAttribute('data-char') || '';
             var entry = getCharacterEntry(ch);
             var meta = entry
-              ? [entry.pinyin, entry.meaning].filter(Boolean).join(' · ')
+              ? [formatPinyin(entry.pinyin || ''), entry.meaning].filter(Boolean).join(' · ')
               : 'Origin & history';
             var metaEl = btn.querySelector('.flashcard-char-meta');
             if (metaEl) metaEl.textContent = meta;
@@ -470,10 +558,17 @@
   }
 
   function playCardAudio(card) {
-    if (global.VocabAudio) global.VocabAudio.play(card);
+    try {
+      var pending = global.VocabAudio && global.VocabAudio.play(card);
+      if (pending && typeof pending.catch === "function") pending.catch(function () {});
+    } catch (e) {
+      /* playback is optional */
+    }
   }
 
   function advanceQueue() {
+    session.locked = false;
+    session.revealAfter = Date.now() + 280;
     session.index += 1;
     session.flipped = false;
     if (session.index >= session.queue.length) {
@@ -504,6 +599,8 @@
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
+      if (session.locked || !session.flipped) return;
+      session.locked = true;
       if (global.App && typeof global.App.setCardStatus === 'function') {
         global.App.setCardStatus(card.id, 'known');
       } else if (global.StatusStore) {
@@ -521,10 +618,12 @@
   }
 
   function startSession(filter) {
+    if (session.active || session.starting) return;
     if (!global.SRS) {
       console.error('Cards: window.SRS is required');
       return;
     }
+    session.starting = true;
 
     filter = filter || readFilterFromDom() || {};
     session.filter = {
@@ -547,6 +646,7 @@
     if (snap) queue = queue.slice(0, snap.remaining);
 
     session.celebrate = false;
+    session.revealAfter = 0;
     session.queue = queue;
     session.index = 0;
     session.flipped = false;
@@ -555,18 +655,27 @@
 
     if (!queue.length) {
       session.active = false;
+      session.starting = false;
+      session.locked = false;
       setVisible(els.idle, true);
       setVisible(els.session, false);
       if (snap && snap.done && global.Daily && typeof global.Daily.paint === 'function') {
         global.Daily.paint();
+        setVisible(els.empty, false);
         return;
       }
       setVisible(els.empty, true);
-      if (els.empty) els.empty.textContent = 'Your desk is clear — no cards due in this topic. Widen the filter, or return tomorrow.';
+      if (els.empty) {
+        els.empty.textContent = session.filter.keyword
+          ? 'Your desk is clear — no cards due in this topic. Widen the filter, or return tomorrow.'
+          : 'Your desk is clear — no cards due. Widen filters, or return tomorrow.';
+      }
       return;
     }
 
     session.active = true;
+    session.starting = false;
+    session.locked = false;
 
     setVisible(els.idle, false);
     setVisible(els.empty, false);
@@ -578,32 +687,47 @@
   function flip() {
     if (!session.active || !currentCard()) return;
     if (session.flipped) return;
+    if (Date.now() < session.revealAfter) return;
     session.flipped = true;
     renderCard();
     playCardAudio(currentCard());
   }
 
   function rate(rating) {
-    if (!session.active || !session.flipped) return;
+    if (!session.active || !session.flipped || session.locked) return;
     var card = currentCard();
     if (!card || !global.SRS) return;
+    session.locked = true;
 
-    var reviewed = global.SRS.review(card.id, rating);
-    if (global.JourneyStore && typeof global.JourneyStore.logStudy === "function") {
-      global.JourneyStore.logStudy(1);
+    var reviewed;
+    try {
+      reviewed = global.SRS.review(card.id, rating);
+    } catch (err) {
+      session.locked = false;
+      return;
     }
-    if (global.Daily && typeof global.Daily.recordReview === "function") {
-      var result = global.Daily.recordReview(rating, reviewed && reviewed.last);
-      if (result && result.justHit) session.celebrate = true;
+    try {
+      if (global.JourneyStore && typeof global.JourneyStore.logStudy === "function") {
+        global.JourneyStore.logStudy(1);
+      }
+      if (global.Daily && typeof global.Daily.recordReview === "function") {
+        var result = global.Daily.recordReview(rating, reviewed && reviewed.last);
+        if (result && result.justHit) session.celebrate = true;
+      }
+    } catch (err) {
+      /* still move on so a storage failure cannot grade the same card twice */
     }
     advanceQueue();
   }
 
   function endSession() {
     session.active = false;
+    session.starting = false;
+    session.locked = false;
     session.queue = [];
     session.index = 0;
     session.flipped = false;
+    blockStartClicksUntil = Date.now() + 400;
     showRatingButtons(false);
     setVisible(els.reveal, false);
     if (els.flashcard) els.flashcard.classList.remove('is-flipped');
@@ -632,6 +756,7 @@
 
     if (els.start) {
       els.start.addEventListener('click', function () {
+        if (Date.now() < blockStartClicksUntil) return;
         startSession(readFilterFromDom());
       });
     }
