@@ -110,12 +110,13 @@
   function fetchRemote(cfg, appId) {
     return request(cfg, "GET", appId + ".json").then(function (file) {
       if (!file) return null;
-      if (typeof file.content !== "string" || !file.content) {
-        throw errorWithStatus(0, "Sync data could not be read");
-      }
+      var raw = typeof file.content === "string" ? file.content.replace(/\s/g, "") : "";
+      if (!raw) return { sha: file.sha || null, data: null };
       try {
-        var data = JSON.parse(fromBase64(file.content));
-        if (!data || typeof data !== "object") throw new Error("bad sync json");
+        var data = JSON.parse(fromBase64(raw));
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+          return { sha: file.sha || null, data: null };
+        }
         return { sha: file.sha, data: data };
       } catch (e) {
         if (e && e.status) throw e;
@@ -124,7 +125,31 @@
     });
   }
 
+  function putPayload(cfg, appId, getPayload, applyPayload, isRetry) {
+    return fetchRemote(cfg, appId).then(function (remote) {
+      if (remote && remote.data && typeof applyPayload === "function") {
+        applyPayload(remote.data);
+      }
+      var body = {
+        message: "Save " + appId + " progress",
+        content: toBase64(JSON.stringify(getPayload())),
+      };
+      if (remote && remote.sha) body.sha = remote.sha;
+      return request(cfg, "PUT", appId + ".json", body).then(function () {
+        return "Saved to GitHub";
+      }, function (err) {
+        if (!isRetry && err && err.status === 409) {
+          return putPayload(cfg, appId, getPayload, applyPayload, true);
+        }
+        throw err;
+      });
+    });
+  }
+
+  var saveFlight = null;
+
   function save(appId, getPayload, applyPayload) {
+    if (saveFlight) return saveFlight;
     var cfg;
     if (
       !global.confirm("Save " + appId + " progress to GitHub?") ||
@@ -137,17 +162,14 @@
     } catch (e) {
       return Promise.reject(e);
     }
-    return fetchRemote(cfg, appId).then(function (remote) {
-      if (remote) applyPayload(remote.data);
-      var body = {
-        message: "Save " + appId + " progress",
-        content: toBase64(JSON.stringify(getPayload())),
-      };
-      if (remote) body.sha = remote.sha;
-      return request(cfg, "PUT", appId + ".json", body).then(function () {
-        return "Saved to GitHub";
-      });
+    saveFlight = putPayload(cfg, appId, getPayload, applyPayload, false).then(function (msg) {
+      saveFlight = null;
+      return msg;
+    }, function (err) {
+      saveFlight = null;
+      throw err;
     });
+    return saveFlight;
   }
 
   function load(appId, applyPayload) {
@@ -158,7 +180,7 @@
       return Promise.reject(e);
     }
     return fetchRemote(cfg, appId).then(function (remote) {
-      if (!remote) return "Nothing saved on GitHub yet";
+      if (!remote || !remote.data) return "Nothing saved on GitHub yet";
       applyPayload(remote.data);
       return "Imported from GitHub";
     });
@@ -179,7 +201,8 @@
     };
     if (sha) body.sha = sha;
     return request(cfg, "PUT", appId + ".json", body).then(function (file) {
-      return { sha: file && file.sha };
+      var sha = file && (file.sha || (file.content && file.content.sha));
+      return { sha: sha || null };
     });
   }
 

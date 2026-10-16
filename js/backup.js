@@ -29,7 +29,14 @@
     return out;
   }
 
+  function asMap(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return value;
+  }
+
   function newerCard(a, b) {
+    if (!a || typeof a !== "object" || Array.isArray(a)) return b;
+    if (!b || typeof b !== "object" || Array.isArray(b)) return a;
     var sa = [a.last || 0, (a.repetitions || 0) + (a.lapses || 0), a.due || 0];
     var sb = [b.last || 0, (b.repetitions || 0) + (b.lapses || 0), b.due || 0];
     for (var i = 0; i < sa.length; i++) {
@@ -91,8 +98,8 @@
     local = local || {};
     incoming = incoming || {};
     var merged = {
-      status: Object.assign({}, local.status || {}, incoming.status || {}),
-      srs: mergeSrs(local.srs, incoming.srs),
+      status: Object.assign({}, asMap(local.status), asMap(incoming.status)),
+      srs: mergeSrs(asMap(local.srs), asMap(incoming.srs)),
       journey: mergeJourney(local.journey, incoming.journey),
     };
     var game = global.Daily && typeof global.Daily.mergeGame === "function"
@@ -218,6 +225,9 @@
     if (status === 401 || /token rejected/i.test(raw)) return { label: "Token rejected", title: raw };
     if (status === 403 || /access denied/i.test(raw)) return { label: "Access denied", title: raw };
     if (status === 409 || /another device/i.test(raw)) return { label: "Sync conflict", title: raw };
+    if (!status && /could not reach|offline|failed to fetch|network/i.test(raw)) {
+      return { label: "Offline", title: raw };
+    }
     if ((err && err.name === "AbortError") || /timed out/i.test(raw)) return { label: "Sync timed out", title: raw };
     if ((err && err.name === "SyntaxError") || /could not be read|not a Chinese Library backup/i.test(raw)) {
       return { label: "Sync unreadable", title: raw };
@@ -257,11 +267,19 @@
     }, DEBOUNCE_MS);
   }
 
+  function remoteBackup(data) {
+    return !!(data && data.app === APP);
+  }
+
   function syncWithRetry(isRetry) {
     return global.GhSync.fetch(APP).then(function (remote) {
-      if (remote) applyData(remote.data);
-      var next = overlayWrite(remote && remote.data, payload());
-      if (remote && fingerprint(remote.data) === fingerprint(next)) return;
+      if (remote && remote.data && remote.data.app && remote.data.app !== APP) {
+        throw new Error("This file is not a Chinese Library backup");
+      }
+      if (remote && remoteBackup(remote.data)) applyData(remote.data);
+      var base = remote && remoteBackup(remote.data) ? remote.data : null;
+      var next = overlayWrite(base, payload());
+      if (remote && remoteBackup(remote.data) && fingerprint(remote.data) === fingerprint(next)) return;
       if (!remote && !hasProgress(next)) return;
       return global.GhSync.write(APP, next, remote && remote.sha).catch(function (err) {
         if (!isRetry && err && err.status === 409) return syncWithRetry(true);
@@ -301,9 +319,12 @@
       showConnect();
       if (!queued) return;
       queued = false;
-      if (!ok) return;
       clearTimeout(saveTimer);
       saveTimer = null;
+      if (!ok) {
+        schedulePush();
+        return;
+      }
       pushNow();
     });
   }
