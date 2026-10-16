@@ -850,4 +850,6 @@
     rate: rate,
     endSession: endSession,
   };
+  global.Cards.session = session;
+  global.Cards.renderCard = renderCard;
 })(typeof window !== 'undefined' ? window : globalThis);
