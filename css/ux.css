@@ -199,6 +199,8 @@ body,
 html.practice-focus,
 html.practice-focus body {
   background-color: var(--dx-bg, var(--bg-hex, #f6f4ef));
+  overflow: hidden;
+  overflow-anchor: none;
 }
 
 html.dark.practice-focus,
@@ -245,6 +247,7 @@ html.practice-focus .main {
 
 html.practice-focus .view-study {
   gap: 8px;
+  overflow-anchor: none;
   padding:
     env(safe-area-inset-top, 0px)
     max(12px, env(safe-area-inset-right, 0px))
