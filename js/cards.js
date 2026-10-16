@@ -841,14 +841,49 @@
     }
   }
 
+  function resetPracticeScroll() {
+    if (typeof document === 'undefined') return;
+    var nodes = [
+      document.scrollingElement,
+      document.documentElement,
+      document.body,
+      document.getElementById('view-study'),
+      document.getElementById('view-root'),
+      document.querySelector('.main'),
+      document.querySelector('.app'),
+    ];
+    for (var i = 0; i < nodes.length; i++) {
+      if (!nodes[i]) continue;
+      nodes[i].scrollTop = 0;
+      nodes[i].scrollLeft = 0;
+    }
+    try { window.scrollTo(0, 0); } catch (err) { /* ignore */ }
+  }
+
+  function placeExitButton() {
+    var btn = document.getElementById('practice-focus-exit');
+    if (!btn || !document.body || btn.parentElement === document.body) return;
+    document.body.appendChild(btn);
+  }
+
   function enterPracticeFocus() {
     if (typeof document === 'undefined' || !document.documentElement) return;
     var already = practiceFocus;
     practiceFocus = true;
     document.documentElement.classList.add('practice-focus');
-    var view = document.getElementById('view-study');
-    if (view) view.scrollTop = 0;
+    placeExitButton();
+    resetPracticeScroll();
     if (!already) requestPracticeFullscreen();
+    // Fullscreen and scroll anchoring can move the view after this turn.
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () {
+        if (!practiceFocus) return;
+        resetPracticeScroll();
+        requestAnimationFrame(function () {
+          if (practiceFocus) resetPracticeScroll();
+        });
+      });
+    }
   }
 
   function exitPracticeFocus() {
@@ -866,6 +901,7 @@
     var active = fullscreenNode();
     if (active) {
       browserFullscreen = true;
+      if (practiceFocus) resetPracticeScroll();
       return;
     }
     // A rejected requestFullscreen (iOS) must not drop the focus layout.
