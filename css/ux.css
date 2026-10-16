@@ -190,3 +190,191 @@ body,
     transition: none !important;
   }
 }
+
+/* Practice focus: progress, card, and grade buttons fill the screen. */
+.practice-focus-exit {
+  display: none;
+}
+
+html.practice-focus,
+html.practice-focus body {
+  background-color: var(--dx-bg, var(--bg-hex, #f6f4ef));
+}
+
+html.dark.practice-focus,
+html.dark.practice-focus body {
+  background-color: var(--dx-bg, #141414);
+}
+
+html.practice-focus body {
+  padding-bottom: 0;
+}
+
+html.practice-focus .app {
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+html.practice-focus .app,
+html.practice-focus .app-body,
+html.practice-focus .app-shell,
+html.practice-focus .main,
+html.practice-focus .view-study,
+html.practice-focus .study-session {
+  transform: none !important;
+  animation: none !important;
+  filter: none;
+}
+
+html.practice-focus .app-shell {
+  padding-bottom: 0;
+}
+
+html.practice-focus .dx-header,
+html.practice-focus .tab-bar,
+html.practice-focus #connect,
+html.practice-focus #ux-bar,
+html.practice-focus #study-filters,
+html.practice-focus .ux-keys {
+  display: none !important;
+}
+
+html.practice-focus .main {
+  padding: 0;
+}
+
+html.practice-focus .view-study {
+  gap: 8px;
+  padding:
+    env(safe-area-inset-top, 0px)
+    max(12px, env(safe-area-inset-right, 0px))
+    0
+    max(12px, env(safe-area-inset-left, 0px));
+  overflow: hidden;
+}
+
+html.practice-focus .study-session {
+  flex: 1 1 auto;
+  gap: 8px;
+  width: 100%;
+  max-width: 720px;
+  min-height: 0;
+  margin-inline: auto;
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  overflow: hidden;
+}
+
+html.practice-focus .study-progress-wrap {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html.practice-focus .practice-session-row {
+  min-height: 44px;
+  padding-right: 48px;
+}
+
+html.practice-focus .flashcard {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  justify-content: flex-start;
+}
+
+html.practice-focus .flashcard-front,
+html.practice-focus .flashcard-back {
+  min-height: 0;
+  justify-content: center;
+}
+
+html.practice-focus .flashcard:not(.is-flipped) .flashcard-front {
+  min-height: 100%;
+}
+
+html.practice-focus .practice-focus-exit {
+  position: fixed;
+  z-index: 60;
+  top: env(safe-area-inset-top, 0px);
+  right: env(safe-area-inset-right, 0px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--dx-border, #e2e0d9);
+  border-radius: 999px;
+  background: var(--dx-card-solid, #fff);
+  color: var(--dx-text, #0d0b08);
+  box-shadow: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+html.dark.practice-focus .practice-focus-exit {
+  border-color: var(--dx-border, #2b2b2b);
+  background: var(--dx-card-solid, #1f1f1f);
+  color: var(--dx-text, #efeeec);
+}
+
+html.practice-focus .practice-focus-exit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 3px var(--dx-accent-soft));
+}
+
+html.practice-focus .practice-focus-exit:active {
+  transform: scale(0.96);
+}
+
+html.practice-focus .study-actions {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding:
+    8px
+    max(12px, env(safe-area-inset-right, 0px))
+    calc(8px + env(safe-area-inset-bottom, 0px))
+    max(12px, env(safe-area-inset-left, 0px));
+  background: var(--dx-bg, #f6f4ef);
+  border-top: 1px solid var(--dx-border, var(--ink-line));
+}
+
+html.dark.practice-focus .study-actions {
+  background: var(--dx-bg, #141414);
+}
+
+html.practice-focus #btn-reveal:not([hidden]) {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  display: block;
+  width: min(720px, calc(100% - max(12px, env(safe-area-inset-left, 0px)) - max(12px, env(safe-area-inset-right, 0px))));
+  margin-inline: auto;
+}
+
+@media (max-width: 400px) {
+  html.practice-focus .flashcard {
+    padding: 16px 12px;
+  }
+
+  html.practice-focus .btn-rate {
+    min-height: 52px;
+    padding: 6px 2px;
+  }
+}

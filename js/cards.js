@@ -208,6 +208,17 @@
     els.hard = $('btn-hard') || ensureEl('btn-hard', 'button', els.actions, 'btn-hard');
     els.good = $('btn-good') || ensureEl('btn-good', 'button', els.actions, 'btn-good');
     els.easy = $('btn-easy') || ensureEl('btn-easy', 'button', els.actions, 'btn-easy');
+
+    els.exitFocus = $('practice-focus-exit');
+    if (!els.exitFocus && els.session) {
+      els.exitFocus = document.createElement('button');
+      els.exitFocus.type = 'button';
+      els.exitFocus.id = 'practice-focus-exit';
+      els.exitFocus.className = 'practice-focus-exit';
+      els.exitFocus.setAttribute('aria-label', 'Exit');
+      els.exitFocus.textContent = '\u00d7';
+      els.session.insertBefore(els.exitFocus, els.session.firstChild);
+    }
   }
 
   function getAppCards() {
@@ -727,6 +738,7 @@
     setVisible(els.session, true);
     renderCard();
     playCardAudio(currentCard());
+    enterPracticeFocus();
   }
 
   function flip() {
@@ -776,6 +788,99 @@
     showRatingButtons(false);
     setVisible(els.reveal, false);
     if (els.flashcard) els.flashcard.classList.remove('is-flipped');
+    exitPracticeFocus();
+  }
+
+  var practiceFocus = false;
+  var browserFullscreen = false;
+
+  function fullscreenNode() {
+    if (typeof document === 'undefined') return null;
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+
+  function requestPracticeFullscreen() {
+    try {
+      if (typeof document === 'undefined' || !document.documentElement) return;
+      if (typeof document.documentElement.requestFullscreen !== 'function') return;
+      if (fullscreenNode()) return;
+      var pending = document.documentElement.requestFullscreen();
+      if (pending && typeof pending.catch === 'function') pending.catch(function () {});
+    } catch (err) {
+      /* iOS and other browsers without the Fullscreen API */
+    }
+  }
+
+  function exitPracticeFullscreen() {
+    try {
+      if (!fullscreenNode()) return;
+      if (typeof document.exitFullscreen !== 'function') return;
+      var pending = document.exitFullscreen();
+      if (pending && typeof pending.catch === 'function') pending.catch(function () {});
+    } catch (err) {
+      /* already left fullscreen */
+    }
+  }
+
+  function overlayOpen() {
+    var detail = document.getElementById('card-detail');
+    var origin = document.getElementById('char-origin-overlay');
+    if (detail && !detail.hidden) return true;
+    if (origin && !origin.hidden) return true;
+    return false;
+  }
+
+  function focusCardIfStudying() {
+    if (!session.active || !els.flashcard) return;
+    var view = document.getElementById('view-study');
+    if (!view || view.hidden) return;
+    try {
+      els.flashcard.focus({ preventScroll: true });
+    } catch (err) {
+      try { els.flashcard.focus(); } catch (e) { /* focus is optional */ }
+    }
+  }
+
+  function enterPracticeFocus() {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    var already = practiceFocus;
+    practiceFocus = true;
+    document.documentElement.classList.add('practice-focus');
+    var view = document.getElementById('view-study');
+    if (view) view.scrollTop = 0;
+    if (!already) requestPracticeFullscreen();
+  }
+
+  function exitPracticeFocus() {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    var was = practiceFocus || document.documentElement.classList.contains('practice-focus');
+    practiceFocus = false;
+    browserFullscreen = false;
+    document.documentElement.classList.remove('practice-focus');
+    if (!was) return;
+    exitPracticeFullscreen();
+    focusCardIfStudying();
+  }
+
+  function onFullscreenChange() {
+    var active = fullscreenNode();
+    if (active) {
+      browserFullscreen = true;
+      return;
+    }
+    // A rejected requestFullscreen (iOS) must not drop the focus layout.
+    if (!browserFullscreen || !practiceFocus) return;
+    browserFullscreen = false;
+    practiceFocus = false;
+    if (document.documentElement) document.documentElement.classList.remove('practice-focus');
+    focusCardIfStudying();
+  }
+
+  function onFocusKey(e) {
+    if (!e || e.key !== 'Escape') return;
+    if (!practiceFocus) return;
+    if (overlayOpen()) return;
+    exitPracticeFocus();
   }
 
   function onKeydown(e) {
@@ -829,8 +934,18 @@
     if (els.hard) els.hard.addEventListener('click', function () { rate('hard'); });
     if (els.good) els.good.addEventListener('click', function () { rate('good'); });
     if (els.easy) els.easy.addEventListener('click', function () { rate('easy'); });
+    if (els.exitFocus) {
+      els.exitFocus.addEventListener('click', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        exitPracticeFocus();
+      });
+    }
 
     document.addEventListener('keydown', onKeydown);
+    document.addEventListener('keydown', onFocusKey, true);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   }
 
   function init() {
@@ -849,6 +964,8 @@
     flip: flip,
     rate: rate,
     endSession: endSession,
+    enterPracticeFocus: enterPracticeFocus,
+    exitPracticeFocus: exitPracticeFocus,
   };
   global.Cards.session = session;
   global.Cards.renderCard = renderCard;

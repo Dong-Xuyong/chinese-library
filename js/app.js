@@ -1050,6 +1050,9 @@
 
   function showTab(name) {
     const tab = canonicalTab(name);
+    if (tab !== "practice" && window.Cards && typeof window.Cards.exitPracticeFocus === "function") {
+      window.Cards.exitPracticeFocus();
+    }
     // Re-query in case els were stale
     const viewLibrary = els.viewLibrary || document.getElementById("view-library");
     const viewStudy = els.viewStudy || document.getElementById("view-study");
