@@ -266,13 +266,18 @@ html.practice-focus .study-session {
 
 html.practice-focus .study-progress-wrap {
   flex: 0 0 auto;
-  padding: 0;
+  margin-inline: -12px;
+  padding: 0 12px 6px;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: var(--dx-bg, #f6f4ef);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+html.dark.practice-focus .study-progress-wrap {
+  background: var(--dx-bg, #141414);
 }
 
 html.practice-focus .practice-session-row {
