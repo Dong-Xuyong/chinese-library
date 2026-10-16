@@ -543,7 +543,7 @@
       deltaKnown >= 0 ? "+" + deltaKnown + " known" : deltaKnown + " known";
 
     return (
-      '<article class="progress-card progress-card-journey">' +
+      '<article class="progress-card progress-card-journey dx-card">' +
       '<div class="section-heading">' +
       '<div><span class="eyebrow">Your path</span><h2>Learning journey</h2></div>' +
       "</div>" +
@@ -580,7 +580,7 @@
   function dashboardHero(data) {
     var due = (data.srs && data.srs.due) || 0;
     return (
-      '<section class="level-card" aria-labelledby="progress-level-title">' +
+      '<section class="level-card dx-card" aria-labelledby="progress-level-title">' +
       '<div class="level-orb" aria-hidden="true">' +
       data.knownPct +
       "%</div>" +
@@ -621,7 +621,7 @@
       dashboardHero(data) +
       '<div class="progress-grid">' +
       journeyHtml(built || { series: [], milestones: [] }, cards) +
-      '<article class="progress-card progress-card-mastery">' +
+      '<article class="progress-card progress-card-mastery dx-card">' +
       '<div class="section-heading"><div><span class="eyebrow">Retention</span><h2>Mastery</h2></div></div>' +
       '<div class="mastery-wrap">' +
       donutSvg(data.known, data.learning) +
@@ -636,11 +636,11 @@
       data.total +
       "</strong></li>" +
       "</ul></div></article>" +
-      '<article class="progress-card progress-card-srs">' +
+      '<article class="progress-card progress-card-srs dx-card">' +
       '<div class="section-heading"><div><span class="eyebrow">Spaced repetition</span><h2>SRS today</h2></div></div>' +
       srsMeter(data.srs) +
       "</article>" +
-      '<article class="progress-card progress-card-audio">' +
+      '<article class="progress-card progress-card-audio dx-card">' +
       '<div class="section-heading"><div><span class="eyebrow">Listening</span><h2>Audio coverage</h2></div></div>' +
       '<div class="audio-meter" role="img" aria-label="' +
       data.audioPct +
@@ -655,13 +655,13 @@
       "</strong> speech fallback · <strong>" +
       data.audioPct +
       "%</strong></p></article>" +
-      '<article class="progress-card progress-card-topics">' +
+      '<article class="progress-card progress-card-topics dx-card">' +
       '<div class="section-heading"><div><span class="eyebrow">Library</span><h2>Topics</h2></div></div>' +
       '<p class="progress-hint">Tap a topic to open it in Library</p>' +
       '<div class="progress-bars" id="progress-topics">' +
       barRows(data.themes, data.total, "topic") +
       "</div></article>" +
-      '<article class="progress-card progress-card-pos">' +
+      '<article class="progress-card progress-card-pos dx-card">' +
       '<div class="section-heading"><div><span class="eyebrow">Grammar</span><h2>Parts of speech</h2></div></div>' +
       '<p class="progress-hint">Tap a POS to filter Library</p>' +
       '<div class="progress-bars" id="progress-pos">' +
@@ -725,7 +725,7 @@
     var cards = getCards();
     if (!cards.length) {
       root.innerHTML =
-        '<p class="progress-empty">Load vocabulary to see progress charts.</p>';
+        '<p class="progress-empty dx-card">Load vocabulary to see progress charts.</p>';
       return false;
     }
 
@@ -742,7 +742,7 @@
       } catch (err) {
         console.error("Progress.render failed:", err);
         root.innerHTML =
-          '<p class="progress-empty">Could not render charts. ' +
+          '<p class="progress-empty dx-card">Could not render charts. ' +
           escapeHtml(err && err.message ? err.message : "Unknown error") +
           "</p>";
       }
