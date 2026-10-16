@@ -16,22 +16,38 @@
   var cachedRaw;
   var cachedState = {};
 
+  function asMap(parsed) {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    return parsed;
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw === cachedRaw) return cachedState;
+      if (raw === cachedRaw && cachedState && !Array.isArray(cachedState)) return cachedState;
       if (!raw) {
         cachedRaw = raw;
         cachedState = {};
         return cachedState;
       }
       var parsed = JSON.parse(raw);
-      cachedState = parsed && typeof parsed === 'object' ? parsed : {};
+      var map = asMap(parsed);
+      if (!map) {
+        cachedState = {};
+        save(cachedState);
+        return cachedState;
+      }
+      cachedState = map;
       cachedRaw = raw;
       return cachedState;
     } catch (e) {
-      cachedRaw = undefined;
-      return {};
+      cachedState = {};
+      try {
+        save(cachedState);
+      } catch (err) {
+        cachedRaw = undefined;
+      }
+      return cachedState;
     }
   }
 

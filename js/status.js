@@ -6,14 +6,27 @@
 
   var STORAGE_KEY = "ml-chinese-status-v1";
 
+  function emptyMap() {
+    return {};
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return {};
+      if (!raw) return emptyMap();
       var parsed = JSON.parse(raw);
-      return parsed && typeof parsed === "object" ? parsed : {};
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        save(emptyMap());
+        return emptyMap();
+      }
+      return parsed;
     } catch (e) {
-      return {};
+      try {
+        save(emptyMap());
+      } catch (err) {
+        /* storage may be unavailable */
+      }
+      return emptyMap();
     }
   }
 

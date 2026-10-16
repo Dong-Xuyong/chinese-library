@@ -49,7 +49,9 @@
         snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [],
         events: Array.isArray(parsed.events) ? parsed.events : [],
         firstKnown:
-          parsed.firstKnown && typeof parsed.firstKnown === "object"
+          parsed.firstKnown &&
+          typeof parsed.firstKnown === "object" &&
+          !Array.isArray(parsed.firstKnown)
             ? parsed.firstKnown
             : {},
       };
@@ -90,8 +92,18 @@
         break;
       }
     }
-    if (found >= 0) state.snapshots[found] = point;
-    else state.snapshots.push(point);
+    if (found >= 0) {
+      var prev = state.snapshots[found];
+      if (
+        prev &&
+        prev.learning === point.learning &&
+        prev.known === point.known &&
+        prev.total === point.total
+      ) {
+        return prev;
+      }
+      state.snapshots[found] = point;
+    } else state.snapshots.push(point);
     state.snapshots.sort(function (a, b) {
       return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
     });
