@@ -792,6 +792,7 @@
   }
 
   var practiceFocus = false;
+  var browserFullscreen = false;
 
   function fullscreenNode() {
     if (typeof document === 'undefined') return null;
@@ -854,6 +855,7 @@
     if (typeof document === 'undefined' || !document.documentElement) return;
     var was = practiceFocus || document.documentElement.classList.contains('practice-focus');
     practiceFocus = false;
+    browserFullscreen = false;
     document.documentElement.classList.remove('practice-focus');
     if (!was) return;
     exitPracticeFullscreen();
@@ -861,8 +863,14 @@
   }
 
   function onFullscreenChange() {
-    if (fullscreenNode()) return;
-    if (!practiceFocus) return;
+    var active = fullscreenNode();
+    if (active) {
+      browserFullscreen = true;
+      return;
+    }
+    // A rejected requestFullscreen (iOS) must not drop the focus layout.
+    if (!browserFullscreen || !practiceFocus) return;
+    browserFullscreen = false;
     practiceFocus = false;
     if (document.documentElement) document.documentElement.classList.remove('practice-focus');
     focusCardIfStudying();

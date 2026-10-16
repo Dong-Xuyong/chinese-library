@@ -263,14 +263,14 @@
       live.index = idx;
       live.flipped = !!data.flipped;
       showSession();
+      if (global.Cards && typeof global.Cards.enterPracticeFocus === "function") {
+        global.Cards.enterPracticeFocus();
+      }
       if (global.VocabAudio && global.VocabAudio.stop) global.VocabAudio.stop();
       global.Cards.renderCard();
       if (live.flipped && autoplayOn() && global.VocabAudio) {
         manualSpeak = false;
         global.VocabAudio.play(live.queue[live.index]);
-      }
-      if (global.Cards && typeof global.Cards.enterPracticeFocus === "function") {
-        global.Cards.enterPracticeFocus();
       }
       return true;
     } finally {

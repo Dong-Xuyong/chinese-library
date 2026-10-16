@@ -289,8 +289,12 @@ html.practice-focus .flashcard {
 
 html.practice-focus .flashcard-front,
 html.practice-focus .flashcard-back {
-  min-height: 100%;
+  min-height: 0;
   justify-content: center;
+}
+
+html.practice-focus .flashcard:not(.is-flipped) .flashcard-front {
+  min-height: 100%;
 }
 
 html.practice-focus .practice-focus-exit {
