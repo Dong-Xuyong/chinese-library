@@ -1,0 +1,192 @@
+/* Study shortcuts — same kit tokens as the rest of the shell. */
+
+html,
+body,
+#view-root,
+#view-study,
+#flashcard {
+  overscroll-behavior-x: none;
+}
+
+.ux-bar {
+  display: flex;
+}
+
+.ux-toggle,
+.ux-continue {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--dx-border, var(--ink-line));
+  border-radius: var(--dx-radius, 16px);
+  background: var(--dx-card, var(--ink-elevated));
+  box-shadow: var(--dx-shadow, none);
+  color: var(--dx-text, var(--paper));
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ux-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  text-align: left;
+}
+
+.ux-toggle-state {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--dx-accent-soft, var(--accent-soft));
+  color: var(--dx-accent, var(--accent));
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ux-toggle[aria-pressed="false"] .ux-toggle-state {
+  background: transparent;
+  color: var(--dx-muted, var(--paper-muted));
+  box-shadow: inset 0 0 0 1px var(--dx-border, var(--ink-line));
+}
+
+.ux-continue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  text-align: left;
+}
+
+.ux-continue[hidden] {
+  display: none !important;
+}
+
+.ux-continue small {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--dx-muted, var(--paper-muted));
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.ux-continue strong {
+  display: block;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.ux-continue-go {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dx-accent, var(--accent));
+  font-size: 1.25rem;
+}
+
+.ux-toggle:focus-visible,
+.ux-continue:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring, 0 0 0 3px var(--dx-accent-soft));
+}
+
+.ux-keys {
+  margin: 0;
+  text-align: center;
+  color: var(--dx-muted, var(--paper-muted));
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+#view-study,
+#flashcard {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+#flashcard .flashcard-origins,
+#flashcard .flashcard-char-panel {
+  touch-action: pan-y;
+}
+
+#flashcard.ux-dragging {
+  transition: none;
+  z-index: 2;
+}
+
+#flashcard.ux-left {
+  border-color: var(--danger);
+}
+
+#flashcard.ux-right {
+  border-color: var(--teal);
+}
+
+#flashcard.ux-up {
+  border-color: var(--dx-accent, var(--accent));
+}
+
+.ux-swipe-label {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 3;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--dx-border, var(--ink-line));
+  border-radius: 999px;
+  background: var(--dx-card-solid, #fff);
+  color: var(--dx-text, var(--paper));
+  font-size: 0.8125rem;
+  font-weight: 700;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.ux-swipe-label.is-on {
+  display: flex;
+}
+
+.ux-swipe-label.is-again {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ux-swipe-label.is-good {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+.ux-swipe-label.is-move,
+.ux-swipe-label.is-reveal {
+  color: var(--dx-accent, var(--accent));
+  border-color: var(--dx-accent, var(--accent));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #flashcard.ux-dragging {
+    transform: none !important;
+  }
+
+  .ux-swipe-label,
+  .ux-toggle,
+  .ux-continue {
+    transition: none !important;
+  }
+}
