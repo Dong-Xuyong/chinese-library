@@ -107,6 +107,44 @@
     });
   }
 
+  // 409 handling: refetch, field-level merge, retry once.
+  // mergeFields(remote, local): local wins on fields it has; remote-only fields are kept;
+  // arrays whose items all carry an "id" are unioned by id (local wins per id, remote order first).
+  function isPlainObject(v) {
+    return !!v && typeof v === "object" && !Array.isArray(v);
+  }
+
+  function hasIds(arr) {
+    return arr.length > 0 && arr.every(function (x) { return isPlainObject(x) && x.id != null; });
+  }
+
+  function mergeFields(remote, local) {
+    if (Array.isArray(remote) && Array.isArray(local) && (hasIds(remote) || hasIds(local)) &&
+        (!remote.length || hasIds(remote)) && (!local.length || hasIds(local))) {
+      var byId = {};
+      local.forEach(function (x) { byId[String(x.id)] = x; });
+      var out = [];
+      var seen = {};
+      remote.forEach(function (x) {
+        var k = String(x.id);
+        seen[k] = true;
+        out.push(byId[k] ? mergeFields(x, byId[k]) : x);
+      });
+      local.forEach(function (x) { if (!seen[String(x.id)]) out.push(x); });
+      return out;
+    }
+    if (isPlainObject(remote) && isPlainObject(local)) {
+      var merged = {};
+      Object.keys(remote).forEach(function (k) { merged[k] = remote[k]; });
+      Object.keys(local).forEach(function (k) {
+        merged[k] = k in remote ? mergeFields(remote[k], local[k]) : local[k];
+      });
+      return merged;
+    }
+    return local === undefined ? remote : local;
+  }
+
+
   function fetchRemote(cfg, appId) {
     return request(cfg, "GET", appId + ".json").then(function (file) {
       if (!file) return null;
@@ -132,7 +170,9 @@
       }
       var body = {
         message: "Save " + appId + " progress",
-        content: toBase64(JSON.stringify(getPayload())),
+        content: toBase64(JSON.stringify(
+          isRetry && remote && remote.data ? mergeFields(remote.data, getPayload()) : getPayload()
+        )),
       };
       if (remote && remote.sha) body.sha = remote.sha;
       return request(cfg, "PUT", appId + ".json", body).then(function () {
