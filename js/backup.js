@@ -271,20 +271,18 @@
     return !!(data && data.app === APP);
   }
 
-  function syncWithRetry(isRetry) {
-    return global.GhSync.fetch(APP).then(function (remote) {
+  // gh-sync.js owns the single 409 retry (GhSync.sync); this file never retries itself.
+  function syncOnce() {
+    return global.GhSync.sync(APP, function (remote) {
       if (remote && remote.data && remote.data.app && remote.data.app !== APP) {
         throw new Error("This file is not a Chinese Library backup");
       }
       if (remote && remoteBackup(remote.data)) applyData(remote.data);
       var base = remote && remoteBackup(remote.data) ? remote.data : null;
       var next = overlayWrite(base, payload());
-      if (remote && remoteBackup(remote.data) && fingerprint(remote.data) === fingerprint(next)) return;
-      if (!remote && !hasProgress(next)) return;
-      return global.GhSync.write(APP, next, remote && remote.sha).catch(function (err) {
-        if (!isRetry && err && err.status === 409) return syncWithRetry(true);
-        throw err;
-      });
+      if (remote && remoteBackup(remote.data) && fingerprint(remote.data) === fingerprint(next)) return undefined;
+      if (!remote && !hasProgress(next)) return undefined;
+      return next;
     });
   }
 
@@ -306,7 +304,7 @@
     pushing = true;
     setStatus("Syncing\u2026");
     var before = fingerprint(readAll());
-    return syncWithRetry(false).then(function () {
+    return syncOnce().then(function () {
       setStatus("Synced " + hhmm());
       if (fingerprint(readAll()) !== before) refreshUi();
       return true;
@@ -429,6 +427,7 @@
     overlayWrite: overlayWrite,
     fingerprint: fingerprint,
     payload: payload,
+    pushNow: pushNow,
   };
 
   if (typeof document !== "undefined") {

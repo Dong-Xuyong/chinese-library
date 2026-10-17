@@ -359,3 +359,40 @@ test("audio survives a missing zh-CN voice and rapid taps", async () => {
   await assert.doesNotReject(() => ctx.VocabAudio.play(card));
   await new Promise((resolve) => setTimeout(resolve, 70));
 });
+
+test("backup sync: gh-sync.js is the only 409 retry path; a second 409 shows the conflict status", async () => {
+  function run(conflicts) {
+    let puts = 0;
+    const els = {};
+    const document = {
+      readyState: "loading",
+      visibilityState: "visible",
+      addEventListener() {},
+      getElementById(id) {
+        return els[id] || (els[id] = { textContent: "", title: "", hidden: false, removeAttribute() {}, addEventListener() {} });
+      },
+    };
+    const ctx = loadScripts(["dong-ui/gh-sync.js", "js/daily.js", "js/backup.js"], {
+      document,
+      Storage: class { setItem() {} },
+      fetch(url, opts) {
+        const method = (opts && opts.method) || "GET";
+        if (method === "GET") {
+          return Promise.resolve(jsonResponse(200, { sha: "sha-" + puts, content: Buffer.from(JSON.stringify({ app: "chinese-library", version: 1, status: { r: "known" } })).toString("base64"), encoding: "base64" }));
+        }
+        puts += 1;
+        if (puts <= conflicts) return Promise.resolve(jsonResponse(409, { message: "conflict" }));
+        return Promise.resolve(jsonResponse(200, { content: { sha: "done" } }));
+      },
+    });
+    ctx.localStorage.setItem("dong-gh-sync", JSON.stringify({ token: "t", repo: "Dong-Xuyong/progress-sync" }));
+    ctx.localStorage.setItem("ml-chinese-status-v1", JSON.stringify({ a: "known" }));
+    return ctx.ChineseBackup.pushNow().then(() => ({ puts: () => puts, label: els["sync-label"].textContent }));
+  }
+  const once = await run(1);
+  assert.match(once.label, /^Synced /);
+  assert.equal(once.puts(), 2, "one 409 is retried once by gh-sync.js");
+  const twice = await run(5);
+  assert.equal(twice.puts(), 2, "a second 409 stops: no extra retry from backup.js");
+  assert.equal(twice.label, "Sync conflict");
+});
