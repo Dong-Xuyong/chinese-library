@@ -336,8 +336,30 @@
     });
   }
 
+  // fetch -> build(remote) -> write; on a 409 fetch, build and write once more.
+  // build returns the payload to write, or undefined to skip. A second 409 stops.
+  function syncFile(appId, build) {
+    function attempt(isRetry) {
+      return fetchFile(appId).then(function (remote) {
+        var next = build(remote);
+        if (next === undefined) return null;
+        return writeFile(appId, next, remote && remote.sha).catch(function (err) {
+          if (err && err.status === 409) {
+            if (!isRetry) return attempt(true);
+            var stop = new Error("GitHub file changed again during the merge retry; not retrying");
+            stop.status = 409;
+            throw stop;
+          }
+          throw err;
+        });
+      });
+    }
+    return attempt(false);
+  }
+
   global.GhSync = {
     save: save,
+    sync: syncFile,
     load: load,
     fetch: fetchFile,
     write: writeFile,
